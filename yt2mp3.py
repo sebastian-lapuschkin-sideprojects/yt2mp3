@@ -22,7 +22,7 @@ def check_requirements():
         subprocess.check_output(['which',  'ffmpeg'])
         subprocess.check_output(['which',  'youtube-dl'])
     except subprocess.CalledProcessError:
-        print('One or both of the requried executables could not be found.'
+        print('[yt2mp3] One or both of the requried executables could not be found.'
               + 'Please make sure ffmpeg and youtube-dl are installed and executable.\n'
               + 'E.g. on systems supporting the snap package manager, execute\n'
               + '   "snap install ffmpeg youtube-dl"')
@@ -119,7 +119,7 @@ def move_download_to_output(downloaded_file_name, output_destination):
     output_destination: str - the target file path
     """
     if not downloaded_file_name == output_destination:
-        print('Moving/Renaming downloaded mp3 to "{}"'.format(output_destination))
+        print('[yt2mp3] Moving/Renaming downloaded mp3 to "{}"'.format(output_destination))
         shutil.move(downloaded_file_name, output_destination)
 
 
@@ -146,7 +146,7 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
         segment_naming_pattern += '.mp3'
 
     segment_naming_pattern = '{}/{}'.format(output_destination, segment_naming_pattern)
-    print('Splitting downloaded file "{}" into segments "{}"'.format(downloaded_file_name, segment_naming_pattern))
+    print('[yt2mp3] Splitting downloaded file "{}" into segments "{}"'.format(downloaded_file_name, segment_naming_pattern))
     subprocess.call(['ffmpeg', '-i', downloaded_file_name,
                      '-f', 'segment', '-segment_time', '{}'.format(segment_length),
                      '-c', 'copy',
@@ -171,7 +171,7 @@ def remove_download_archive_file(archive_file_path):
 
     assert os.path.isfile(archive_file_path),\
         "File {} can not be removed, as it does not exist!".format(archive_file_path)
-    print('Removing download archive file "{}"'.format(archive_file_path))
+    print('[yt2mp3] Removing download archive file "{}"'.format(archive_file_path))
     os.remove(archive_file_path)
 
 
