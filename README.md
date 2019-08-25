@@ -11,6 +11,10 @@ Please note that this is in no way a professional or professionally maintained r
 `python3`, `ffmpeg`, `youtube-dl`
 
 ---
+## Agenda:
+add GUI, make portable as stand alone app
+
+---
 ## How to use:
 For now, the tool can be used from terminal:
 ```
