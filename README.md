@@ -34,7 +34,7 @@ optional arguments:
                         The destination file or folder the output shall be
                         written to.
 ```
-Using above command option for example downloads a reading George Orwell's "1984", splits it into segments of five minutes and saves them as consecutively numbered (three digits each) mp3 files in a folder named "1984", ready for transfer to your portable audio player of choice.
+Using above command option for example downloads a reading of George Orwell's "1984", splits it into segments of five minutes each and saves them as consecutively numbered (three digits each: default setting) mp3 files in a folder named "1984", ready for transfer to your portable audio player of choice.
 ```
 python yt2mp3.py -sl 300 -o 1984 https://www.youtube.com/watch?v=_ikc08cytfE
 ```
