@@ -157,6 +157,10 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
     assert len(glob.glob('{}/*.mp3'.format(output_destination))) > 0,\
         'Warning! No output mp3 segments have been generated at "{}/*.mp3"'.format(output_destination)
 
+    #TODO add command line option for this
+    print('[yt2mp3] removing downloaded file "{}"'.format(downloaded_file_name))
+    os.remove(downloaded_file_name)
+
 
 def remove_download_archive_file(archive_file_path):
     """
