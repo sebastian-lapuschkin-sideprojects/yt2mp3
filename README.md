@@ -8,7 +8,11 @@ Please note that this is in no way a professional or professionally maintained r
 
 ---
 ## Requirements:
-`python3`, `ffmpeg`, `youtube-dl`
+
+- `python3` (for downloading videos)
+  + `youtube-dl`
+- `ffmpeg` (for conversion and segmentation)
+
 
 ---
 ## Agenda:
@@ -18,7 +22,7 @@ add GUI, make portable as stand alone app
 ## How to use:
 For now, the tool can be used from terminal:
 ```
-python yt2mp3.py -h 
+python yt2mp3.py -h
 usage: yt2mp3.py [-h] [-sl SEGMENT_LENGTH] [-sn SEGMENT_NAME] [-o OUTPUT]
                  video
 
