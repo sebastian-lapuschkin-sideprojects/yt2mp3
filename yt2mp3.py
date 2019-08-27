@@ -157,7 +157,7 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
     assert len(glob.glob('{}/*.mp3'.format(output_destination))) > 0,\
         'Warning! No output mp3 segments have been generated at "{}/*.mp3"'.format(output_destination)
 
-    #TODO add command line option for this
+    # TODO add command line option for this
     print('[yt2mp3] removing downloaded file "{}"'.format(downloaded_file_name))
     os.remove(downloaded_file_name)
 
@@ -179,24 +179,17 @@ def remove_download_archive_file(archive_file_path):
     os.remove(archive_file_path)
 
 
-if __name__ == '__main__':
-    # check for ffmpeg and youtube-dl
-    check_requirements()
+def download_convert_split(args_namespace):
+    """
+    Executes the main functionality of this script:
+    Downloads the video, extracts audio as mp3, optionally splits into multiple mp3 files
 
-    # define and collect command line arguents (in command line mode.)
-    # NOTE: later add "nogui" switch or sth, once gui exists
-    # add keep-video option
-    # add keep archive-file option
-    argument_parser = argparse.ArgumentParser(description='Convert videos from Youtube to mp3 files!')
-    argument_parser.add_argument('video', type=str,
-                                 help='The URL or ID of the video to download and convert')
-    argument_parser.add_argument('-sl', '--segment_length', type=int, default=None,
-                                 help='If given, the downloaded mp3 file will be divide into segments of this length (in seconds)')
-    argument_parser.add_argument('-sn', '--segment_name', type=str, default='%03d.mp3',
-                                 help='the naming pattern of the output mp3 file segments')
-    argument_parser.add_argument('-o', '--output', type=str, default=None,
-                                 help='The destination file or folder the output shall be written to.')
-    args = argument_parser.parse_args()
+    Parameters:
+    -----------
+
+    args_namespace: Namespace - A Namespace type object, populated by the command line argument parser
+        bundling all options for a single video conversion call.
+    """
 
     # NOTE: Idea. this code describes functions implementing the default work flow.
     # Later, when adding a GUI, allow command line args optionally, as a way to pre-determine
@@ -207,14 +200,48 @@ if __name__ == '__main__':
     # for this it might make sense to introduce a simple batch job description language.
     # time will tell.
 
-    archive_file_path, downloaded_file = download_video_as_mp3(args.video)
-    output_destination = determine_prepare_output(downloaded_file, args.output, args.segment_length)
-    if args.segment_length is None:
+    # NOTE: ONLY USES THE FIRST PASSED VIDEO ID OR URL. IGNORES THE REST, FOR NOW. TODO: IMPROVE
+    archive_file_path, downloaded_file = download_video_as_mp3(args_namespace.video[0])
+    output_destination = determine_prepare_output(downloaded_file, args_namespace.output, args_namespace.segment_length)
+    if args_namespace.segment_length is None:
         # no segments but single file: move output
         move_download_to_output(downloaded_file, output_destination)
     else:
         # split mp3 into segments
-        split_download_into_segments(downloaded_file, output_destination, args.segment_length, args.segment_name)
+        split_download_into_segments(downloaded_file, output_destination, args_namespace.segment_length, args_namespace.segment_name)
 
     # clean up
     remove_download_archive_file(archive_file_path)
+
+
+if __name__ == '__main__':
+    # check for ffmpeg and youtube-dl
+    check_requirements()
+
+    # define and collect command line arguents (in command line mode.)
+    # NOTE: later add "nogui" switch or sth, once gui exists
+    # add keep-video option
+    # add keep archive-file option
+    argument_parser = argparse.ArgumentParser(description='Convert videos from Youtube to mp3 files!')
+    argument_parser.add_argument('video', type=str, nargs='*',
+                                 help='The URL or ID of the video to download and convert')
+    argument_parser.add_argument('-sl', '--segment_length', type=int, default=None,
+                                 help='If given, the downloaded mp3 file will be divided into segments of this length (in seconds)')
+    argument_parser.add_argument('-sn', '--segment_name', type=str, default='%03d.mp3',
+                                 help='the naming pattern of the output mp3 file segments')
+    argument_parser.add_argument('-o', '--output', type=str, default=None,
+                                 help='The destination file or folder the output shall be written to.')
+    args = argument_parser.parse_args()
+
+    # NOTE: terminate command line mode if no video has been given.
+    if len(args.video) < 1:
+        print('[yt2mp3] No video URL or ID argument passed. terminating.')
+        exit()  # redundant exit call
+    else:
+        # core idea also for GUI use later: use Namespace object to bundle arguments.
+        download_convert_split(args)
+
+    # NOTE: does not make sense to execute multiple videos at once. limits:
+    # parameterization. either call multiple instances of this script from
+    # command line or implement this function later via GUI, ie by using ThreadPoolExecutor
+    # to submit jobs and read their state (running, finished, exception happened).
