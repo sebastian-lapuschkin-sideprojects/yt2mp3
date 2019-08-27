@@ -43,6 +43,8 @@ def download_video_as_mp3(video_url):
     Path to the downloaded mp3 file
     """
     archive_file = '.downloaded-{}.txt'.format(datetime.datetime.now())
+    # youtube-dl also provides a command line interface which is more
+    # rich and clear than its python API
     cmd = ['youtube-dl',
            '--ignore-errors', '--extract-audio',
            '--format', 'bestaudio',
