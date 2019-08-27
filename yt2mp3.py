@@ -187,7 +187,8 @@ def download_convert_split(args_namespace):
     Parameters:
     -----------
 
-    args_namespace: Namespace - A Namespace type object, populated by the command line argument parser
+    args_namespace: argparse.Namespace - A Namespace type object, populated either manually or
+        by the command line argument parser
         bundling all options for a single video conversion call.
     """
 
