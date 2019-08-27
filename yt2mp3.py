@@ -44,9 +44,8 @@ if __name__ == '__main__':
     yt2mp3_utils.check_requirements()
 
     # define and collect command line arguents (in command line mode.)
-    # NOTE: later add "nogui" switch or sth, once gui exists
-    # add keep-video option
-    # add keep archive-file option
+    # TODO: add keep-video option
+    # TODO: add keep archive-file option
     argument_parser = argparse.ArgumentParser(description='Convert videos from Youtube to mp3 files!')
     argument_parser.add_argument('video', type=str, nargs='*',
                                  help='The URL or ID of the video to download and convert')
@@ -61,7 +60,7 @@ if __name__ == '__main__':
     args = argument_parser.parse_args()
 
     if args.nogui or True:  # NOTE: there is no GUI mode currently
-        if len(args.video) < 1:
+        if not args.video:
             # NOTE: terminate command line mode if no video has been given.
             print('[yt2mp3] No video URL or ID argument passed. terminating.')
             exit()  # redundant exit call
