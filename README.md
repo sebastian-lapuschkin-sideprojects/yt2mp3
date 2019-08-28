@@ -18,6 +18,10 @@ Please note that this is in no way a professional or professionally maintained r
 ## Agenda:
 add GUI, make portable as stand alone app
 
+Rough draft of how the gui could look like:
+
+![gui draft](docs/rough_draft.png)
+
 ---
 ## How to use:
 For now, the tool can be used from terminal:
