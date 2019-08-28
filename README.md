@@ -20,7 +20,7 @@ add GUI, make portable as stand alone app
 
 Rough draft of how the gui could look like:
 
-![gui draft](docs/rough_draft.png)
+![gui draft](doc/rough_draft.png)
 
 ---
 ## How to use:
