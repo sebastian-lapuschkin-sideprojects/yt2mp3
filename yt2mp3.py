@@ -84,7 +84,7 @@ if __name__ == '__main__':
     # read command line args
     args = parse_command_line_args()
 
-    if args.nogui or True:  # NOTE: there is no GUI mode currently
+    if args.nogui:
         if not args.video:
             # NOTE: terminate command line mode if no video has been given.
             print('[yt2mp3] No video URL or ID argument passed. terminating.')
@@ -93,7 +93,11 @@ if __name__ == '__main__':
         download_convert_split(args)
 
     else:
-        pass
+        import qt5_gui as gui
+        # change imports to exchange the gui, if furhter options are added.
+        # goal: portable, lightweigth, aesthetic. pick 3.
+        gui.run()
+
         # TODO: build gui (qt5? other. ) application and start it.
         # take initial parameterization from args.
         # repurpose argparse.Namespace as container.
