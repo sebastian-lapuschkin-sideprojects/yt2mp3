@@ -13,6 +13,11 @@ def download_convert_split(args_namespace):
     args_namespace: argparse.Namespace - A Namespace type object, populated either manually or
         by the command line argument parser
         bundling all options for a single video conversion call.
+
+    Returns:
+    --------
+
+    argparse.Namespace object as a configuration container.
     """
 
     # NOTE: Idea. this code describes functions implementing the default work flow.
@@ -39,9 +44,17 @@ def download_convert_split(args_namespace):
     yt2mp3_utils.remove_download_archive_file(archive_file_path)
 
 
-if __name__ == '__main__':
-    # check for ffmpeg and youtube-dl
-    yt2mp3_utils.check_requirements()
+def parse_command_line_args(argument_list=None):
+    """
+    Creates a argparse.Argument parser and parses given command line arguments.
+    If not given explicitly, the args are parsed from the terminal input.
+
+    Parameters:
+    -----------
+    argument_list: list - (optional): ['--a', 'list', '--of', 'params', '--like', 'this']
+        where argument key words are distinguished from the values via leading hyphens (short form)
+        or double hyphens (long form)
+    """
 
     # define and collect command line arguents (in command line mode.)
     # TODO: add keep-video option
@@ -57,7 +70,19 @@ if __name__ == '__main__':
                                  help='The destination file or folder the output shall be written to.')
     argument_parser.add_argument('-n', '--nogui', action='store_true',
                                  help='Setting this option runs yt2mp3 for a single video without showing a GUI')
-    args = argument_parser.parse_args()
+
+    if argument_list is None:
+        return argument_parser.parse_args()
+    else:
+        return argument_parser.parse_args(argument_list)
+
+
+if __name__ == '__main__':
+    # check for ffmpeg and youtube-dl
+    yt2mp3_utils.check_requirements()
+
+    # read command line args
+    args = parse_command_line_args()
 
     if args.nogui or True:  # NOTE: there is no GUI mode currently
         if not args.video:
@@ -69,7 +94,7 @@ if __name__ == '__main__':
 
     else:
         pass
-        # TODO: build gui (qt5?) application and start it.
+        # TODO: build gui (qt5? other. ) application and start it.
         # take initial parameterization from args.
         # repurpose argparse.Namespace as container.
         # allow execution of mutiple runs in tabs(?)
