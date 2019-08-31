@@ -1,6 +1,7 @@
 import os
 import sys
 import copy
+import argparse
 
 from PyQt5.QtWidgets import QMainWindow      # pylint: disable=F0401
 from PyQt5.QtWidgets import QApplication     # pylint: disable=F0401
@@ -82,9 +83,15 @@ class MainWindow(QWidget):
 
         # add initial tab from argparse_namespace input and show
         self.add_tab()
-        self.show()
 
-        #TODO: add functionality and controls
+        ################################
+        # add functionality and controls
+        ################################
+
+        #TODO: run all, stop all, close tab
+        self.add_tab_button.clicked.connect(self.add_tab)
+
+        self.show()
 
 
     def add_tab(self):
@@ -93,14 +100,14 @@ class MainWindow(QWidget):
         """
         active_tab_index = self.tab_panel.currentIndex()
         if active_tab_index >= 0:
-            argparse_namespace = copy.deepcopy(self.tab_panel.widget(active_tab_index))
-            print('argparse copied from tab index {} : {}'.format(active_tab_index, argparse_namespace))
+            argparse_namespace = self.tab_panel.widget(active_tab_index).get_args()
         else:
             argparse_namespace = yt2mp3.parse_command_line_args()
-            print('argparse parsed from command line input')
 
         new_tab = JobPanel(self.thread_pool_executor, argparse_namespace)
         new_tab_name = 'Tab {}'.format(self.tabs_created)
+
+
 
         self.tab_panel.addTab(new_tab, new_tab_name)
         self.tabs_created += 1
@@ -214,6 +221,23 @@ class JobPanel(QWidget):
         #TODO: add functionality and controls
 
 
+    def get_args(self, copy=True):
+        """
+        Returns the argparse.Namespace object of this JobPanel instance
+
+        Parameters:
+        -----------
+        copy: bool - (optional). Default:True . Controls wheter to return a
+            copy or a reference to the argparse.Namespace object
+
+        Returns:
+        --------
+        argparse.Namespace containing this JobPanel's configuration
+        """
+        if copy:
+            return argparse.Namespace(**vars(self.argparse_namespace))
+        else:
+            return self.argparse_namespace
 
 
 
