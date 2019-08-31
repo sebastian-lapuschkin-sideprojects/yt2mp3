@@ -78,13 +78,13 @@ def parse_command_line_args(argument_list=None):
 
 
 if __name__ == '__main__':
-    # check for ffmpeg and youtube-dl
-    yt2mp3_utils.check_requirements()
-
     # read command line args
     args = parse_command_line_args()
 
     if args.nogui:
+        # check for ffmpeg and youtube-dl
+        yt2mp3_utils.check_requirements()
+
         if not args.video:
             # NOTE: terminate command line mode if no video has been given.
             print('[yt2mp3] No video URL or ID argument passed. terminating.')
