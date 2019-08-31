@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 
 from PyQt5.QtWidgets import QMainWindow      # pylint: disable=F0401
 from PyQt5.QtWidgets import QApplication     # pylint: disable=F0401
@@ -9,8 +10,12 @@ from PyQt5.QtWidgets import QAction          # pylint: disable=F0401
 from PyQt5.QtWidgets import QTabWidget       # pylint: disable=F0401
 from PyQt5.QtWidgets import QVBoxLayout      # pylint: disable=F0401
 from PyQt5.QtWidgets import QHBoxLayout      # pylint: disable=F0401
-from PyQt5.QtWidgets import QVBoxLayout      # pylint: disable=F0401
+from PyQt5.QtWidgets import QGridLayout      # pylint: disable=F0401
 from PyQt5.QtWidgets import QLabel           # pylint: disable=F0401
+from PyQt5.QtWidgets import QLineEdit        # pylint: disable=F0401
+from PyQt5.QtWidgets import QCheckBox        # pylint: disable=F0401
+from PyQt5.QtWidgets import QFileDialog      # pylint: disable=F0401
+from PyQt5.QtWidgets import QPlainTextEdit   # pylint: disable=F0401
 from PyQt5.QtGui import QIcon                # pylint: disable=F0401
 from PyQt5.QtCore import pyqtSlot            # pylint: disable=F0401
 
@@ -35,7 +40,7 @@ class MainWindow(QWidget):
         self.left = 0
         self.top = 0
         self.width = 600
-        self.height = 300
+        self.height = 350
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
@@ -44,15 +49,16 @@ class MainWindow(QWidget):
         # set up threading work backend, leaving at least one cpu for the OS and other crap
         ###################################################################################
         self.thread_pool_executor = ThreadPoolExecutor(max_workers=max(1,os.cpu_count()-1))
+        # TODO: or better use QThread? check features!
 
         ###############################
         # set up layout of main window
         ###############################
 
         # first, some buttons to the right
-        self.add_tab_button = QPushButton('+')         # button for adding new tabs (see below)
-        self.run_all_jobs_button = QPushButton('>>')   # button to run all runnable (not yet running and un-run) jobs
-        self.kill_all_jobs_button = QPushButton('XX')  # button to terminate all running jobs
+        self.add_tab_button = QPushButton('+ Tab')         # button for adding new tabs (see below)
+        self.run_all_jobs_button = QPushButton('Run all')   # button to run all runnable (not yet running and un-run) jobs
+        self.kill_all_jobs_button = QPushButton('Stop all')  # button to terminate all running jobs
 
         self.button_panel = QWidget()                 # widget and layout to group buttons
         button_layout = QVBoxLayout(self)
@@ -85,31 +91,18 @@ class MainWindow(QWidget):
         """
         Adds a new tab to the JobTabPanel
         """
-        new_tab_content = JobPanel(self.thread_pool_executor, yt2mp3.parse_command_line_args()) #TODO infer number of active/existing tabs. set argparse_namespace
-        tab_name = 'Tab {}'.format(self.tabs_created)
-        #tab_layout = QVBoxLayout()
+        active_tab_index = self.tab_panel.currentIndex()
+        if active_tab_index >= 0:
+            argparse_namespace = copy.deepcopy(self.tab_panel.widget(active_tab_index))
+            print('argparse copied from tab index {} : {}'.format(active_tab_index, argparse_namespace))
+        else:
+            argparse_namespace = yt2mp3.parse_command_line_args()
+            print('argparse parsed from command line input')
 
-        # TODO: add proper gui stuff with controls here.
-        # that includes text fields for params, etc
-        # Idea: upon adding a tab, copy settings from most recently looked at/highest numbered tab (if there is one)
-        # Idea: each tab has a argparse.Namespace object containing that info.
-        # Idea: when entering new data. use yt2mp3.parse_command_line_args to update the data info and display if successful.
-        # below is first dummy code for playing around
+        new_tab = JobPanel(self.thread_pool_executor, argparse_namespace)
+        new_tab_name = 'Tab {}'.format(self.tabs_created)
 
-        # register fxn to add a tab to this button# TODO: this fxn should be registered in the control button panel
-        ##new_tab_button = QPushButton('Add new tab from tab {}'.format(self.tabs_created))
-        ##new_tab_button.clicked.connect(self.add_tab)
-
-        # register fxn to run passed command line args
-        # TODO: finish, ie register namespace for command line options
-        ##run_process_button = QPushButton('Run stuff from tab {}'.format(self.tabs_created))
-        #run_process_button.clicked.connect(self.run_tab_job)
-
-        ##tab_layout.addWidget(new_tab_button)
-        ##tab_layout.addWidget(run_process_button)
-
-        ##new_tab.setLayout(tab_layout)
-        self.tab_panel.addTab(new_tab_content, tab_name)
+        self.tab_panel.addTab(new_tab, new_tab_name)
         self.tabs_created += 1
 
 
@@ -145,13 +138,78 @@ class JobPanel(QWidget):
         # we need QLabel to specify the kind of information shown
         # an option to enter that information as QTextEdit/QFileDialog
         # controls and feedback (QPlainTextEdit, setReadOnly(True)) for this one job.
-        video_id_url_label = QLabel('URL/ID')
+
+        # create gui elements and populate with default values from self.argparse_namespace
+        self.video_id_url_label = QLabel('URL/ID')
+        self.video_id_url_input = QLineEdit()
+        self.video_id_url_input.setText(argparse_namespace.video[0] if argparse_namespace.video else '')
+
+        self.output_location_label = QLabel('Output location')
+        self.output_location_input = QLineEdit()
+        self.output_location_input.setText(argparse_namespace.output)
+        self.output_location_dialog_button = QPushButton('Choose...')
+
+        self.segment_output_label = QLabel('Split output into segments')
+        self.segment_output_checkbox = QCheckBox()
+        self.segment_output_checkbox.setChecked(self.argparse_namespace.segment_length is not None )
+
+        self.output_segment_duration_label = QLabel('Output segment duration')
+        self.output_segment_duration_input = QLineEdit()
+        self.output_segment_duration_input.setEnabled(self.segment_output_checkbox.isChecked())
+        self.output_segment_duration_label.setEnabled(self.segment_output_checkbox.isChecked())
+        self.output_segment_duration_input.setText(str(self.argparse_namespace.segment_length).replace('None',''))
+
+        self.output_segment_name_pattern_label = QLabel('Segment name pattern')
+        self.output_segment_name_pattern_input = QLineEdit()
+        self.output_segment_duration_label.setEnabled(self.segment_output_checkbox.isChecked())
+        self.output_segment_name_pattern_input.setEnabled(self.segment_output_checkbox.isChecked())
+        self.output_segment_name_pattern_input.setText(self.argparse_namespace.segment_name)
+
+        self.output_window_label = QLabel('Process output')
+        self.output_window = QPlainTextEdit()  # TODO: subclass this, reroute stdout. or remove https://stackoverflow.com/questions/14161100/which-qt-widget-should-i-use-for-message-display
+        self.output_window.setEnabled(False)
+
+        self.run_job_button = QPushButton('Run')
+        self.stop_job_button = QPushButton('Stop')
+        # NOTE: this is how to obtain the entered text
+        #def test():
+        #    print('Text changed to "{}""'.format(self.video_id_url_input.text()))
+        #self.video_id_url_input.textChanged.connect(test)
+
+        # add initial values form self.argparse_namespace
 
 
-        # assemble Panel
-        layout = QHBoxLayout()
-        layout.addWidget(video_id_url_label)
-        self.setLayout(layout)
+        # assemble tab
+        layout = QGridLayout()
+
+        layout.addWidget(self.video_id_url_label, 0, 0)
+        layout.addWidget(self.video_id_url_input, 0, 1)
+
+        layout.addWidget(self.output_location_label, 1, 0)
+        layout.addWidget(self.output_location_input, 1, 1)
+        layout.addWidget(self.output_location_dialog_button, 1, 2)
+
+        layout.setRowStretch(2,1)  # allows the constructio of "empty lines"
+
+        layout.addWidget(self.segment_output_label, 3, 0)
+        layout.addWidget(self.segment_output_checkbox, 3, 1)
+
+        layout.addWidget(self.output_segment_duration_label, 4, 0)
+        layout.addWidget(self.output_segment_duration_input, 4, 1)
+
+        layout.addWidget(self.output_segment_name_pattern_label, 5, 0)
+        layout.addWidget(self.output_segment_name_pattern_input, 5, 1)
+
+        layout.addWidget(self.run_job_button, 4, 2)
+        layout.addWidget(self.stop_job_button, 5, 2)
+
+        layout.setRowStretch(6,1)
+
+        layout.addWidget(self.output_window_label, 7, 0)
+        layout.addWidget(self.output_window, 8, 0, 1, 3)
+        layout.setRowStretch(8, 2)  # make output text box two rows high
+
+        self.setLayout(layout)      # install GUI elements
 
         #TODO: add functionality and controls
 
@@ -159,7 +217,7 @@ class JobPanel(QWidget):
 
 
 
-    def run_tab_job(self):
+    def run_job(self):
         # TODO: refactor
         # NOTE: this line parses the command line args as given. probably default values.
         # this could be used for populating the tab values upon creation
