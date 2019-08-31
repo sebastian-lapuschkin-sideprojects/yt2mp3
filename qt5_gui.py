@@ -284,40 +284,27 @@ class JobPanel(QWidget):
         Attempts to parse output path
         """
         self.argparse_namespace.output = self.output_location_input.text()
-        print(self.argparse_namespace)
 
     def select_output_location_from_qfiledialog(self):
         """
-        dialog = QFileDialog(self, 'Pick output location')
+        Opens a file (right now really only a directory) selection dialogue.
+        Allows to browser for an output location (directory).
+
+        To specify a file name, add it manually, until a suitable solution has been found.
+        """
+
+        # TODO: Use a file selectinon dialog which is able to select both files or folders! any found examples so far failed!
+        # TODO: Improve user experience in general
+        dialog = QFileDialog(self, 'Pick output directory')
         dialog.setFileMode(QFileDialog.Directory)
-        dialog.setOption(QFileDialog.DontUseNativeDialog, True)
 
-        # Try to select multiple files and directories at the same time in QFileDialog
-        list_view = dialog.findChild("listView")
-        if list_view:
-            list_view.setSelectionMode(QAbstractItemView.MultiSelection)
-        tree_view = dialog.findChild()
-        if tree_view:
-            list_view.setSelectionMode(QAbstractItemView.MultiSelection)
-        dialog.exec_()
-        print(dialog.selectedFiles())
-        """
-
-        print('this shit does not work yet!')
-        # TODO: what below print statement says.
-        print('TODO: Use a file selectinon dialog which is able to select both files or folders! any found examples so far failed! ')
+        if dialog.exec_() == 1:
+            output_dir = dialog.selectedFiles()[0]
+            self.output_location_input.setText(output_dir)
+            # NOTE: triggers self.output_location_input.textChanged
 
 
-        """
-        print(dialog.exec_())
-        print(dialog.selectedFiles())
-        if dialog.exec_() == QtGui.QDialog.Accepted:
-            output_location = dialog.getSelectedFiles()[0]
-        print(output_location)
-        self.output_location_input.setText(output_location)
-        # NOTE: triggers self.output_location_input.textChanged
-        # ...
-        """
+
 
 
     def segment_output_state_changed(self):
