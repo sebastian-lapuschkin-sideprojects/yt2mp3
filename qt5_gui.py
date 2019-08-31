@@ -1,4 +1,6 @@
+import os
 import sys
+
 from PyQt5.QtWidgets import QMainWindow      # pylint: disable=F0401
 from PyQt5.QtWidgets import QApplication     # pylint: disable=F0401
 from PyQt5.QtWidgets import QPushButton      # pylint: disable=F0401
@@ -8,12 +10,14 @@ from PyQt5.QtWidgets import QTabWidget       # pylint: disable=F0401
 from PyQt5.QtWidgets import QVBoxLayout      # pylint: disable=F0401
 from PyQt5.QtWidgets import QHBoxLayout      # pylint: disable=F0401
 from PyQt5.QtWidgets import QVBoxLayout      # pylint: disable=F0401
+from PyQt5.QtWidgets import QLabel           # pylint: disable=F0401
 from PyQt5.QtGui import QIcon                # pylint: disable=F0401
 from PyQt5.QtCore import pyqtSlot            # pylint: disable=F0401
 
+from concurrent.futures import ThreadPoolExecutor
 import yt2mp3
 
-# entry hook(s) for the gui app.
+# entry hook for the gui app.
 # planned use:
 # import <this_module>
 # <this_module>.run()
@@ -25,7 +29,6 @@ def run():
 
 class MainWindow(QWidget):
     def __init__(self):
-        # TODO add input param args_namespace containing data of first tab
         # set up basic geometry of main window
         super().__init__()
         self.title = 'yt2mp3 - Your simple Youtube to MP3 converter'
@@ -36,101 +39,55 @@ class MainWindow(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
+
+        ###################################################################################
+        # set up threading work backend, leaving at least one cpu for the OS and other crap
+        ###################################################################################
+        self.thread_pool_executor = ThreadPoolExecutor(max_workers=max(1,os.cpu_count()-1))
+
+        ###############################
         # set up layout of main window
-        # left: tab widget with jobs
-        self.tab_panel = JobTabPanel()
-        #self.tab_panel = None
+        ###############################
 
-        # right: button bar with global controls.
-        # TODO. global controls might need access to tabs.
-        # TODO: give ThreadPoolExecutor to main window, or tab panel
-        # TODO: connect controls
-        self.button_panel = ButtonPanel(self.tab_panel)
+        # first, some buttons to the right
+        self.add_tab_button = QPushButton('+')         # button for adding new tabs (see below)
+        self.run_all_jobs_button = QPushButton('>>')   # button to run all runnable (not yet running and un-run) jobs
+        self.kill_all_jobs_button = QPushButton('XX')  # button to terminate all running jobs
 
-        # TODO: find out how to specify for each widget how much space it may use
-        # QWidget.resize(...) doesnt do anything.
+        self.button_panel = QWidget()                 # widget and layout to group buttons
+        button_layout = QVBoxLayout(self)
 
-        #self.setCentralWidget(self.button_panel)
+        button_layout.addWidget(self.add_tab_button)   # assemble buttons
+        button_layout.addStretch()                     # add some spacing
+        button_layout.addWidget(self.run_all_jobs_button)
+        button_layout.addWidget(self.kill_all_jobs_button)
+        self.button_panel.setLayout(button_layout)
+
+        # second, a tab panel for job specification to the left
+        self.tab_panel = QTabWidget()
+        self.tab_panel.setTabsClosable(True)           # make tabs closable. TODO: FIX! does not do anything
+        self.tabs_created = 0                          # count how many tabs have been created
+
+        # assemble gui elements
         window_layout = QHBoxLayout(self)
-        window_layout.addWidget(self.tab_panel)
-        window_layout.addWidget(self.button_panel)
+        window_layout.addWidget(self.tab_panel)        # tab panel to the left
+        window_layout.addWidget(self.button_panel)     # controls to the right
         self.setLayout(window_layout)
+
+        # add initial tab from argparse_namespace input and show
+        self.add_tab()
         self.show()
 
-
-
-
-class ButtonPanel(QWidget):
-    def __init__(self, job_tab_panel):
-        super(QWidget, self).__init__()
-
-        #TODO: use unused space to show overall job status?
-
-        # a button to add a new JobTab to the JobTabPanel
-        # TODO: add functionality. # TODO: replace + with icon?
-        self.add_tab_button = QPushButton('+')
-
-        # a button to run all runnable (not yet running and un-run) jobs
-        # TODO: add functionality. # TODO: replace with icon?
-        self.run_all_jobs_button = QPushButton('>>')
-
-        # a button to terminate all running jobs
-        # TODO: add functionality. # TODO: replace with icon?
-        self.kill_all_jobs_button = QPushButton('XX')
-
-        buttons_layout = QVBoxLayout(self)
-        buttons_layout.addStretch()
-        buttons_layout.addWidget(self.add_tab_button)
-        buttons_layout.addWidget(self.run_all_jobs_button)
-        buttons_layout.addWidget(self.kill_all_jobs_button)
-        self.setLayout(buttons_layout)
-
-
-
-class JobTabPanel(QWidget):
-    #TODO how to get get rid of/suppress this weird add-layout-message? message?
-
-    def __init__(self):
-        super(QWidget, self).__init__()
-
-        # Initialize tab screen.
-        # self.tabs contains all existing tabs
-        self.tabs = QTabWidget()
-
-        # allows tabs to be closed (should, but doesnt.)
-        # TODO: fix! # TODO: make sure all tab data (job data) is removed/cleaned up properly
-        self.tabs.setTabsClosable(True)
-        self.tabs_created = 0
-
-        # create the initial tab.
-        self.add_tab()
-
-        # Add tabs to widget
-        panel_layout = QVBoxLayout(self)
-        panel_layout.addWidget(self.tabs)
-        self.setLayout(panel_layout)
-        #NOTE: apparently widgets can have layouts and layouts are containers to widgets
-
-        #self.tabs.resize(width,height)# NOTE RESETS TAB PANEL GEOMETRY? Does not seeem to be required (with the jobtabs as the only widget)
-        self.tabs.resize(100,100)
-
-    def run_tab_job(self):
-        # NOTE: this line parses the command line args as given. probably default values.
-        # this could be used for populating the tab values upon creation
-        args = yt2mp3.parse_command_line_args()
-
-        # for now, only prints the args given on command line.
-        # TODO: print the tab-specific args.
-        print(args)
+        #TODO: add functionality and controls
 
 
     def add_tab(self):
         """
         Adds a new tab to the JobTabPanel
         """
-        new_tab = QWidget() #TODO create specialized tab class (?).
+        new_tab_content = JobPanel(self.thread_pool_executor, yt2mp3.parse_command_line_args()) #TODO infer number of active/existing tabs. set argparse_namespace
         tab_name = 'Tab {}'.format(self.tabs_created)
-        tab_layout = QVBoxLayout(self)
+        #tab_layout = QVBoxLayout()
 
         # TODO: add proper gui stuff with controls here.
         # that includes text fields for params, etc
@@ -140,17 +97,77 @@ class JobTabPanel(QWidget):
         # below is first dummy code for playing around
 
         # register fxn to add a tab to this button# TODO: this fxn should be registered in the control button panel
-        new_tab_button = QPushButton('Add new tab from tab {}'.format(self.tabs_created))
-        new_tab_button.clicked.connect(self.add_tab)
+        ##new_tab_button = QPushButton('Add new tab from tab {}'.format(self.tabs_created))
+        ##new_tab_button.clicked.connect(self.add_tab)
 
         # register fxn to run passed command line args
         # TODO: finish, ie register namespace for command line options
-        run_process_button = QPushButton('Run stuff from tab {}'.format(self.tabs_created))
-        run_process_button.clicked.connect(self.run_tab_job)
+        ##run_process_button = QPushButton('Run stuff from tab {}'.format(self.tabs_created))
+        #run_process_button.clicked.connect(self.run_tab_job)
 
-        tab_layout.addWidget(new_tab_button)
-        tab_layout.addWidget(run_process_button)
+        ##tab_layout.addWidget(new_tab_button)
+        ##tab_layout.addWidget(run_process_button)
 
-        new_tab.setLayout(tab_layout)
-        self.tabs.addTab(new_tab, tab_name)
+        ##new_tab.setLayout(tab_layout)
+        self.tab_panel.addTab(new_tab_content, tab_name)
         self.tabs_created += 1
+
+
+class JobPanel(QWidget):
+    """
+    A Widget class representing all information required for executing
+    a download+conversion job
+    """
+
+    def __init__(self, thread_pool_executor, argparse_namespace):
+        """
+        Constitutes a GUI container for job information and execution.
+        Holds the necessary data, allows editing of parameters.
+
+        Parameters:
+        -----------
+        thread_pool_executor: concurrent.futures.ThreadPoolExecutor - Executor for running jobs.
+
+        argparse_namespace: argparse.Namespace - container for job data
+        """
+        super(QWidget, self).__init__()
+
+        # use this ThreadPoolExecutor instance for executing jobs
+        self.thread_pool_executor = thread_pool_executor
+        # use this argparse.Namespace instance for job data specification
+        self.argparse_namespace = argparse_namespace
+
+        ################################
+        # set up tab elements and layout
+        ################################
+
+        # per argument (video, output, segment length, segment name):
+        # we need QLabel to specify the kind of information shown
+        # an option to enter that information as QTextEdit/QFileDialog
+        # controls and feedback (QPlainTextEdit, setReadOnly(True)) for this one job.
+        video_id_url_label = QLabel('URL/ID')
+
+
+        # assemble Panel
+        layout = QHBoxLayout()
+        layout.addWidget(video_id_url_label)
+        self.setLayout(layout)
+
+        #TODO: add functionality and controls
+
+
+
+
+
+    def run_tab_job(self):
+        # TODO: refactor
+        # NOTE: this line parses the command line args as given. probably default values.
+        # this could be used for populating the tab values upon creation
+        args = yt2mp3.parse_command_line_args()
+
+        # for now, only prints the args given on command line.
+        # TODO: print the tab-specific args.
+        print(args)
+
+
+
