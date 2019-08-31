@@ -17,11 +17,14 @@ from PyQt5.QtWidgets import QLineEdit        # pylint: disable=F0401
 from PyQt5.QtWidgets import QCheckBox        # pylint: disable=F0401
 from PyQt5.QtWidgets import QFileDialog      # pylint: disable=F0401
 from PyQt5.QtWidgets import QPlainTextEdit   # pylint: disable=F0401
+from PyQt5 import QtGui                      # pylint: disable=F0401
+from PyQt5.QtWidgets import QAbstractItemView    # pylint: disable=F0401
 from PyQt5.QtGui import QIcon                # pylint: disable=F0401
 from PyQt5.QtCore import pyqtSlot            # pylint: disable=F0401
 
 from concurrent.futures import ThreadPoolExecutor
 import yt2mp3
+import yt2mp3_utils
 
 # entry hook for the gui app.
 # planned use:
@@ -45,7 +48,6 @@ class MainWindow(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
-
         ###################################################################################
         # set up threading work backend, leaving at least one cpu for the OS and other crap
         ###################################################################################
@@ -57,28 +59,28 @@ class MainWindow(QWidget):
         ###############################
 
         # first, some buttons to the right
-        self.add_tab_button = QPushButton('+ Tab')         # button for adding new tabs (see below)
+        self.add_tab_button = QPushButton('+ Tab')          # button for adding new tabs (see below)
         self.run_all_jobs_button = QPushButton('Run all')   # button to run all runnable (not yet running and un-run) jobs
-        self.kill_all_jobs_button = QPushButton('Stop all')  # button to terminate all running jobs
+        self.stop_all_jobs_button = QPushButton('Stop all') # button to terminate all running jobs
 
-        self.button_panel = QWidget()                 # widget and layout to group buttons
+        self.button_panel = QWidget()                       # widget and layout to group buttons
         button_layout = QVBoxLayout(self)
 
-        button_layout.addWidget(self.add_tab_button)   # assemble buttons
-        button_layout.addStretch()                     # add some spacing
+        button_layout.addWidget(self.add_tab_button)        # assemble buttons
+        button_layout.addStretch()                          # add some spacing
         button_layout.addWidget(self.run_all_jobs_button)
-        button_layout.addWidget(self.kill_all_jobs_button)
+        button_layout.addWidget(self.stop_all_jobs_button)
         self.button_panel.setLayout(button_layout)
 
         # second, a tab panel for job specification to the left
         self.tab_panel = QTabWidget()
-        self.tab_panel.setTabsClosable(True)           # make tabs closable. TODO: FIX! does not do anything
-        self.tabs_created = 0                          # count how many tabs have been created
+        self.tab_panel.setTabsClosable(True)                # make tabs closable.
+        self.tabs_created = 0                               # count how many tabs have been created
 
         # assemble gui elements
         window_layout = QHBoxLayout(self)
-        window_layout.addWidget(self.tab_panel)        # tab panel to the left
-        window_layout.addWidget(self.button_panel)     # controls to the right
+        window_layout.addWidget(self.tab_panel)             # tab panel to the left
+        window_layout.addWidget(self.button_panel)          # controls to the right
         self.setLayout(window_layout)
 
         # add initial tab from argparse_namespace input and show
@@ -87,9 +89,11 @@ class MainWindow(QWidget):
         ################################
         # add functionality and controls
         ################################
-
-        #TODO: run all, stop all, close tab
         self.add_tab_button.clicked.connect(self.add_tab)
+        self.tab_panel.tabCloseRequested.connect(self.close_tab)
+        self.run_all_jobs_button.clicked.connect(self.run_all_jobs)
+        self.stop_all_jobs_button.clicked.connect(self.stop_all_jobs)
+
 
         self.show()
 
@@ -107,10 +111,30 @@ class MainWindow(QWidget):
         new_tab = JobPanel(self.thread_pool_executor, argparse_namespace)
         new_tab_name = 'Tab {}'.format(self.tabs_created)
 
-
-
         self.tab_panel.addTab(new_tab, new_tab_name)
         self.tabs_created += 1
+
+    def close_tab(self, index):
+        """
+        Removes JobTab, its data and kills its job (if running)
+        """
+        # TODO: figure out what to do. what if job is running? just blindly kill thread?
+        self.tab_panel.widget(index).stop_job()
+        self.tab_panel.removeTab(index)
+
+    def run_all_jobs(self):
+        """
+        Attempts to run all jobs in the job panel
+        """
+        for i in range(len(self.tab_panel)):
+            self.tab_panel.widget(i).run_job()
+
+    def stop_all_jobs(self):
+        """
+        Attempts to stop all jobs in the job panel
+        """
+        for i in range(len(self.tab_panel)):
+            self.tab_panel.widget(i).stop_job()
 
 
 class JobPanel(QWidget):
@@ -178,15 +202,10 @@ class JobPanel(QWidget):
 
         self.run_job_button = QPushButton('Run')
         self.stop_job_button = QPushButton('Stop')
-        # NOTE: this is how to obtain the entered text
-        #def test():
-        #    print('Text changed to "{}""'.format(self.video_id_url_input.text()))
-        #self.video_id_url_input.textChanged.connect(test)
 
-        # add initial values form self.argparse_namespace
-
-
+        ##############
         # assemble tab
+        ##############
         layout = QGridLayout()
 
         layout.addWidget(self.video_id_url_label, 0, 0)
@@ -218,8 +237,22 @@ class JobPanel(QWidget):
 
         self.setLayout(layout)      # install GUI elements
 
-        #TODO: add functionality and controls
+        ################################
+        # add functionality and controls
+        ################################
+        # TODO: choose output button (change output location field!)
+        self.run_job_button.clicked.connect(self.run_job)
+        self.stop_job_button.clicked.connect(self.stop_job)
 
+        self.video_id_url_input.textChanged.connect(self.parse_video_id_url)
+        self.output_location_input.textChanged.connect(self.parse_output_location)
+
+        self.segment_output_checkbox.toggled.connect(self.segment_output_state_changed)
+        self.output_segment_duration_input.textChanged.connect(self.parse_output_segment_length)
+        self.output_segment_name_pattern_input.textChanged.connect(self.parse_output_name_pattern)
+
+        #self.output_location_dialog_button.clicked.connect(lambda: print('TODO: Choose button! add QFileDialog popup'))
+        self.output_location_dialog_button.clicked.connect(self.select_output_location_from_qfiledialog)
 
     def get_args(self, copy=True):
         """
@@ -239,17 +272,133 @@ class JobPanel(QWidget):
         else:
             return self.argparse_namespace
 
+    def parse_video_id_url(self):
+        """
+        Attempts to parse video URL output fiel and add its value to self.argparse_namespace
+        """
+        # NOTE: self.argparse_namespace is a list of strings!
+        self.argparse_namespace.video[0] = self.video_id_url_input.text()
 
+    def parse_output_location(self):
+        """
+        Attempts to parse output path
+        """
+        self.argparse_namespace.output = self.output_location_input.text()
+        print(self.argparse_namespace)
+
+    def select_output_location_from_qfiledialog(self):
+        """
+        dialog = QFileDialog(self, 'Pick output location')
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+
+        # Try to select multiple files and directories at the same time in QFileDialog
+        list_view = dialog.findChild("listView")
+        if list_view:
+            list_view.setSelectionMode(QAbstractItemView.MultiSelection)
+        tree_view = dialog.findChild()
+        if tree_view:
+            list_view.setSelectionMode(QAbstractItemView.MultiSelection)
+        dialog.exec_()
+        print(dialog.selectedFiles())
+        """
+
+        print('this shit does not work yet!')
+        # TODO: what below print statement says.
+        print('TODO: Use a file selectinon dialog which is able to select both files or folders! any found examples so far failed! ')
+
+
+        """
+        print(dialog.exec_())
+        print(dialog.selectedFiles())
+        if dialog.exec_() == QtGui.QDialog.Accepted:
+            output_location = dialog.getSelectedFiles()[0]
+        print(output_location)
+        self.output_location_input.setText(output_location)
+        # NOTE: triggers self.output_location_input.textChanged
+        # ...
+        """
+
+
+    def segment_output_state_changed(self):
+        """
+        Activates/deactivates output segmentation parameter fields according to checkbox state
+        """
+        box_is_checked = self.segment_output_checkbox.isChecked()
+        self.output_segment_duration_input.setEnabled(box_is_checked)
+        self.output_segment_name_pattern_input.setEnabled(box_is_checked)
+
+        if box_is_checked:
+            self.parse_output_segment_length()
+        else:
+            self.argparse_namespace.segment_length = None
+
+
+
+    def parse_output_segment_length(self):
+        """
+        Attempts to parse the length of the output segments
+        """
+
+        text = self.output_segment_duration_input.text()
+        if text:
+            try:
+                self.argparse_namespace.segment_length = int(text)
+            except ValueError:
+                # TODO: properly take care of this. Write error message to self.output_window
+                # TODO: In general think about whether there might be a better solution than manual parsing.
+                pass
+        else:
+            self.argparse_namespace.segment_length = None
+
+
+    def parse_output_name_pattern(self):
+        """
+        Attempts to parse the output name pattern for segmented mp3 files
+        """
+        self.argparse_namespace.segment_name = self.output_segment_name_pattern_input.text()
 
     def run_job(self):
-        # TODO: refactor
-        # NOTE: this line parses the command line args as given. probably default values.
-        # this could be used for populating the tab values upon creation
-        args = yt2mp3.parse_command_line_args()
+        """
+        Try to run this JobPanel's job according to parameterization
+        """
 
-        # for now, only prints the args given on command line.
-        # TODO: print the tab-specific args.
-        print(args)
+        # TODO: Implement
+        # TODO: capture stdout + stderr, redirect to self.output_window (needs to happen earlier, upon tab creation)
+        # TODO: only execute stuff if stuff can be executed (ie thread state allows this.)
+
+        # TODO: enable output window
+        # TODO: lock input fields and buttons
+
+        # TODO: unlock gui, once done.
+
+        # first thing: run a requirements check
+        # TODO: use this to test output window functionality
+        yt2mp3_utils.check_requirements()
+
+        # first debug thing.
+        print('TODO: JobPanel.run_job')
+        print('running', self.argparse_namespace)
+
+
+    def stop_job(self):
+        """
+        Try to stop this JobPanel's job according to parameterization
+        """
+
+        # TODO: Implement
+        # TODO: capture stdout + stderr, redirect to self.output_window (needs to happen earlier, upon tab creation)
+        # TODO: only stop stuff if stuff can be executed (ie thread state allows this.)
+
+        # TODO: disable output window
+        # TODO: unlock input fields and buttons.
+
+        # first thing: run a requirements check
+        yt2mp3_utils.check_requirements()
+
+        # first debug thing.
+        print('TODO: JobPanel.stop_job')
+        print('stopping', self.argparse_namespace)
 
 
 
