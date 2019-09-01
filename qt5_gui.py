@@ -363,6 +363,17 @@ class JobPanel(QWidget):
         # TODO: use this to test output window functionality
         yt2mp3_utils.check_requirements()
 
+        # TODO: THE MOST IMPORTANT ONE:
+        # GET REFERENCE OF THREAD RUNNING THIS JOB
+        # MAKE SURE THREAD INTERRUPTION IS POSSIBLE
+        # CHECK THESE SOURCES:
+        # https://stackoverflow.com/questions/11436502/closing-all-threads-with-a-keyboard-interrupt
+        # https://stackoverflow.com/questions/3788208/threading-ignores-keyboardinterrupt-exception
+        # https://stackoverflow.com/questions/42247429/python-threads-exit-with-ctrl-c-in-python
+        # https://stackoverflow.com/questions/49992329/the-workers-in-threadpoolexecutor-is-not-really-daemon
+        # while thread.is_alive() : murder_it_if_stop_pressed()
+        # https://www.g-loaded.eu/2016/11/24/how-to-terminate-running-python-threads-using-signals/
+
         # first debug thing.
         print('TODO: JobPanel.run_job')
         print('running', self.argparse_namespace)
