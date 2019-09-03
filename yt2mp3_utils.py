@@ -27,7 +27,7 @@ def check_requirements():
         exit()
 
 
-def download_video_as_mp3(video_url):
+def download_video_as_mp3(video_url, process_watcher=None):
     """
     Downloads the video behind video_url from youtube using youtube-dl.
     Then converts it to mp3 using ffmpeg.
@@ -36,6 +36,9 @@ def download_video_as_mp3(video_url):
     Parameters:
     -----------
     video_url: str - The youtube video url
+
+    process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
+        This is hacky, but currently the only solution I am aware of.
 
     Returns:
     --------
@@ -51,7 +54,10 @@ def download_video_as_mp3(video_url):
            '--audio-format', 'mp3',
            '--audio-quality', '0',
            '--download-archive', archive_file, video_url]
-    subprocess.call(cmd)
+    proc = subprocess.Popen(cmd)
+    if process_watcher:
+        process_watcher.child_processes.append(proc)
+    proc.wait()
     assert os.path.isfile(archive_file), 'Download failed for video "{}"'.format(video_url)
 
     archive_content = open(archive_file, 'rt').read().split(' ')[1].strip()
@@ -126,7 +132,7 @@ def move_download_to_output(downloaded_file_name, output_destination):
         shutil.move(downloaded_file_name, output_destination)
 
 
-def split_download_into_segments(downloaded_file_name, output_destination, segment_length, segment_naming_pattern):
+def split_download_into_segments(downloaded_file_name, output_destination, segment_length, segment_naming_pattern, process_watcher=None):
     """
     Splits the downloaded singular mp3 file into segments of equal length,
     and stores the files in the specified output destination.
@@ -142,6 +148,9 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
     segment_length: int - the length in seconds of the target mp3 segments
 
     segment_naming_pattern: str - the naming pattern after which the generated segments are to be called.
+
+    process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
+        This is hacky, but currently the only solution I am aware of.
     """
 
     assert os.path.isdir(output_destination), "Path to folder {} does not exist!".format(output_destination)
@@ -158,7 +167,10 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
            ]
 
     print('[yt2mp3] Splitting downloaded file "{}" into segments "{}"'.format(downloaded_file_name, segment_naming_pattern))
-    subprocess.call(cmd)
+    proc = subprocess.Popen(cmd)
+    if process_watcher:
+        process_watcher.child_processes.append(proc)
+    proc.wait()
 
     assert len(glob.glob('{}/*.mp3'.format(output_destination))) > 0,\
         'Warning! No output mp3 segments have been generated at "{}/*.mp3"'.format(output_destination)

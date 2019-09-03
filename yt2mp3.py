@@ -2,7 +2,7 @@ import argparse
 import yt2mp3_utils
 
 
-def download_convert_split(args_namespace):
+def download_convert_split(args_namespace, process_watcher=None):
     """
     Executes the main functionality of this script:
     Downloads the video, extracts audio as mp3, optionally splits into multiple mp3 files
@@ -13,6 +13,9 @@ def download_convert_split(args_namespace):
     args_namespace: argparse.Namespace - A Namespace type object, populated either manually or
         by the command line argument parser
         bundling all options for a single video conversion call.
+
+    process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
+        This is hacky, but currently the only solution I am aware of.
 
     Returns:
     --------
@@ -30,7 +33,7 @@ def download_convert_split(args_namespace):
     # time will tell.
 
     # NOTE: ONLY USES THE FIRST PASSED VIDEO ID OR URL. IGNORES THE REST, FOR NOW. TODO: IMPROVE
-    archive_file_path, downloaded_file = yt2mp3_utils.download_video_as_mp3(args_namespace.video[0])
+    archive_file_path, downloaded_file = yt2mp3_utils.download_video_as_mp3(args_namespace.video[0], process_watcher)
     output_destination = yt2mp3_utils.determine_prepare_output(downloaded_file, args_namespace.output, args_namespace.segment_length)
     if args_namespace.segment_length is None:
         # no segments but single file: move output
@@ -38,7 +41,8 @@ def download_convert_split(args_namespace):
     else:
         # split mp3 into segments
         yt2mp3_utils.split_download_into_segments(downloaded_file, output_destination,
-                                                  args_namespace.segment_length, args_namespace.segment_name)
+                                                  args_namespace.segment_length, args_namespace.segment_name,
+                                                  process_watcher)
 
     # clean up
     yt2mp3_utils.remove_download_archive_file(archive_file_path)
