@@ -282,7 +282,10 @@ class JobPanel(QWidget):
         argparse.Namespace containing this JobPanel's configuration
         """
         if copy:
-            return argparse.Namespace(**vars(self.argparse_namespace))
+            arg_copy = argparse.Namespace(**vars(self.argparse_namespace))
+            arg_copy.video = []
+            arg_copy.video.extend(self.argparse_namespace.video)
+            return arg_copy
         else:
             return self.argparse_namespace
 
@@ -371,10 +374,10 @@ class JobPanel(QWidget):
         # TODO: capture stdout + stderr, redirect to self.output_window (needs to happen earlier, upon tab creation)
         # TODO: write stderr/stdout into qtextwindowthing
         self.worker_thread = current_thread()
-
+        print(self.argparse_namespace)
         # below line collects started threads to the self.child_processes list
-        yt2mp3_utils.check_requirements()
-        yt2mp3.download_convert_split(self.argparse_namespace, self)
+        #yt2mp3_utils.check_requirements()
+        #yt2mp3.download_convert_split(self.argparse_namespace, self)
 
         # TODO: gui stuff:
         #   unlock stop button
