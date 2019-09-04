@@ -2,6 +2,7 @@ import os
 import sys
 import copy
 import argparse
+import signal
 
 from PyQt5.QtWidgets import QMainWindow      # pylint: disable=F0401
 from PyQt5.QtWidgets import QApplication     # pylint: disable=F0401
@@ -22,7 +23,7 @@ from PyQt5.QtWidgets import QAbstractItemView    # pylint: disable=F0401
 from PyQt5.QtGui import QIcon                # pylint: disable=F0401
 from PyQt5.QtCore import pyqtSlot            # pylint: disable=F0401
 
-from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Pool, current_process
 import yt2mp3
 import yt2mp3_utils
 
@@ -51,8 +52,8 @@ class MainWindow(QWidget):
         ###################################################################################
         # set up threading work backend, leaving at least one cpu for the OS and other crap
         ###################################################################################
-        self.thread_pool_executor = ThreadPoolExecutor(max_workers=max(1,os.cpu_count()-1))
-        # TODO: or better use QThread? check features!
+        self.worker_pool = Pool(max(1, os.cpu_count()-1)) #TODO: figure out how to use process pools, or remove this.
+        # using multiprocessing.Pool
 
         ###############################
         # set up layout of main window
@@ -108,7 +109,7 @@ class MainWindow(QWidget):
         else:
             argparse_namespace = yt2mp3.parse_command_line_args()
 
-        new_tab = JobPanel(self.thread_pool_executor, argparse_namespace)
+        new_tab = JobPanel(self.worker_pool, argparse_namespace)
         new_tab_name = 'Tab {}'.format(self.tabs_created)
 
         self.tab_panel.addTab(new_tab, new_tab_name)
@@ -136,6 +137,10 @@ class MainWindow(QWidget):
         for i in range(len(self.tab_panel)):
             self.tab_panel.widget(i).stop_job()
 
+    def closeEvent(self, event):
+        self.stop_all_jobs()
+        event.accept()
+
 
 class JobPanel(QWidget):
     """
@@ -143,23 +148,27 @@ class JobPanel(QWidget):
     a download+conversion job
     """
 
-    def __init__(self, thread_pool_executor, argparse_namespace):
+    def __init__(self, worker_pool, argparse_namespace):
         """
         Constitutes a GUI container for job information and execution.
         Holds the necessary data, allows editing of parameters.
 
         Parameters:
         -----------
-        thread_pool_executor: concurrent.futures.ThreadPoolExecutor - Executor for running jobs.
+        worker_pool: multiprocessing.Pool - Executor for running jobs.
 
         argparse_namespace: argparse.Namespace - container for job data
         """
         super(QWidget, self).__init__()
 
         # use this ThreadPoolExecutor instance for executing jobs
-        self.thread_pool_executor = thread_pool_executor
+        self.worker_pool = worker_pool
         # use this argparse.Namespace instance for job data specification
         self.argparse_namespace = argparse_namespace
+        # use this to keep track of all created subprocess (in case they need killin')
+        # yt2mp3.download_convert_split provides an interface for that list.
+        self.child_processes = []
+
 
         ################################
         # set up tab elements and layout
@@ -277,7 +286,11 @@ class JobPanel(QWidget):
         Attempts to parse video URL output fiel and add its value to self.argparse_namespace
         """
         # NOTE: self.argparse_namespace is a list of strings!
-        self.argparse_namespace.video[0] = self.video_id_url_input.text()
+        text = self.video_id_url_input.text()
+        if len(self.argparse_namespace.video) == 0:
+            self.argparse_namespace.video.append(text)
+        else:
+            self.argparse_namespace.video[0] = text
 
     def parse_output_location(self):
         """
@@ -345,6 +358,9 @@ class JobPanel(QWidget):
         """
         self.argparse_namespace.segment_name = self.output_segment_name_pattern_input.text()
 
+    def test_run(self):
+        print('hi, this is {} getting its start button pressed from process {}!'.format(1, current_process().name))
+
     def run_job(self):
         """
         Try to run this JobPanel's job according to parameterization
@@ -362,6 +378,16 @@ class JobPanel(QWidget):
         # first thing: run a requirements check
         # TODO: use this to test output window functionality
         yt2mp3_utils.check_requirements()
+        from threading import Thread
+        worker = Thread(target=yt2mp3.download_convert_split, args=(self.argparse_namespace, self))
+        # NOTE: this seems to be an easy and controllable first step, using individual threads
+        # NOTE: Pproblem: youtube-dl's call to ffmpeg for conversion is not terminated properly.
+        #self.child_processes.append(worker)
+        print(self.child_processes)
+        #yt2mp3.download_convert_split(self.argparse_namespace, self)
+        worker.start()
+        #worker.join()
+        #self.worker_pool.apply_async(test_run, (self,))
 
         # TODO: THE MOST IMPORTANT ONE:
         # GET REFERENCE OF THREAD RUNNING THIS JOB
@@ -392,11 +418,14 @@ class JobPanel(QWidget):
         # TODO: unlock input fields and buttons.
 
         # first thing: run a requirements check
-        yt2mp3_utils.check_requirements()
+        #yt2mp3_utils.check_requirements()
+        print(self.child_processes)
+        for p in self.child_processes:
+            print('killing ', p)
+            #os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            p.kill()
 
+        #self.child_processes = []
         # first debug thing.
         print('TODO: JobPanel.stop_job')
         print('stopping', self.argparse_namespace)
-
-
-
