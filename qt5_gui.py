@@ -46,8 +46,8 @@ class MainWindow(QWidget):
         self.title = 'yt2mp3 - Your simple Youtube to MP3 converter'
         self.left = 0
         self.top = 0
-        self.width = 600
-        self.height = 350
+        self.width = 900
+        self.height = 385
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
@@ -376,8 +376,8 @@ class JobPanel(QWidget):
         self.worker_thread = current_thread()
         print(self.argparse_namespace)
         # below line collects started threads to the self.child_processes list
-        #yt2mp3_utils.check_requirements()
-        #yt2mp3.download_convert_split(self.argparse_namespace, self)
+        yt2mp3_utils.check_requirements()
+        yt2mp3.download_convert_split(self.argparse_namespace, self)
 
         # TODO: gui stuff:
         #   unlock stop button
