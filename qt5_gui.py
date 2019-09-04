@@ -117,6 +117,8 @@ class MainWindow(QWidget):
         self.tab_panel.addTab(new_tab, new_tab_name)
         self.tabs_created += 1
 
+        self.tab_panel.setCurrentIndex(active_tab_index+1)
+
     def close_tab(self, index):
         """
         Removes JobTab, its data and kills its job (if running)
