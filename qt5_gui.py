@@ -390,6 +390,7 @@ class JobPanel(QWidget):
         """
         Try to run this JobPanel's job according to parameterization
         """
+        # TODO: take care to not re-run jobs. once they are FINISHED
         self.thread_pool.submit(self.run_job_function)
 
 
@@ -400,6 +401,7 @@ class JobPanel(QWidget):
 
         # TODO: disable output window
         # TODO: unlock input fields and buttons.
+        # TODO: avoid execution of follow-up jobs
 
         for p in self.child_processes:
             print('KILLING CHILD PROCESS', p)
