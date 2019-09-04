@@ -23,7 +23,9 @@ from PyQt5.QtWidgets import QAbstractItemView    # pylint: disable=F0401
 from PyQt5.QtGui import QIcon                # pylint: disable=F0401
 from PyQt5.QtCore import pyqtSlot            # pylint: disable=F0401
 
-from multiprocessing import Pool, current_process
+from concurrent.futures import ThreadPoolExecutor
+from threading import current_thread
+
 import yt2mp3
 import yt2mp3_utils
 
@@ -52,8 +54,8 @@ class MainWindow(QWidget):
         ###################################################################################
         # set up threading work backend, leaving at least one cpu for the OS and other crap
         ###################################################################################
-        self.worker_pool = Pool(max(1, os.cpu_count()-1)) #TODO: figure out how to use process pools, or remove this.
-        # using multiprocessing.Pool
+        self.thread_pool = ThreadPoolExecutor(max_workers=max(1, os.cpu_count()-1))
+
 
         ###############################
         # set up layout of main window
@@ -109,8 +111,8 @@ class MainWindow(QWidget):
         else:
             argparse_namespace = yt2mp3.parse_command_line_args()
 
-        new_tab = JobPanel(self.worker_pool, argparse_namespace)
-        new_tab_name = 'Tab {}'.format(self.tabs_created)
+        new_tab = JobPanel(self.thread_pool, argparse_namespace)
+        new_tab_name = 'Job {}'.format(self.tabs_created)
 
         self.tab_panel.addTab(new_tab, new_tab_name)
         self.tabs_created += 1
@@ -120,7 +122,7 @@ class MainWindow(QWidget):
         Removes JobTab, its data and kills its job (if running)
         """
         # TODO: figure out what to do. what if job is running? just blindly kill thread?
-        self.tab_panel.widget(index).stop_job()
+        self.tab_panel.widget(index).stop_job_callback_fxn()
         self.tab_panel.removeTab(index)
 
     def run_all_jobs(self):
@@ -128,17 +130,18 @@ class MainWindow(QWidget):
         Attempts to run all jobs in the job panel
         """
         for i in range(len(self.tab_panel)):
-            self.tab_panel.widget(i).run_job()
+            self.tab_panel.widget(i).run_job_callback_fxn()
 
     def stop_all_jobs(self):
         """
         Attempts to stop all jobs in the job panel
         """
         for i in range(len(self.tab_panel)):
-            self.tab_panel.widget(i).stop_job()
+            self.tab_panel.widget(i).stop_job_callback_fxn()
 
     def closeEvent(self, event):
         self.stop_all_jobs()
+        self.thread_pool.shutdown(wait=False)
         event.accept()
 
 
@@ -148,26 +151,27 @@ class JobPanel(QWidget):
     a download+conversion job
     """
 
-    def __init__(self, worker_pool, argparse_namespace):
+    def __init__(self, thread_pool, argparse_namespace):
         """
         Constitutes a GUI container for job information and execution.
         Holds the necessary data, allows editing of parameters.
 
         Parameters:
         -----------
-        worker_pool: multiprocessing.Pool - Executor for running jobs.
+        thread_pool: multiprocessing.Pool - Executor for running jobs.
 
         argparse_namespace: argparse.Namespace - container for job data
         """
         super(QWidget, self).__init__()
 
         # use this ThreadPoolExecutor instance for executing jobs
-        self.worker_pool = worker_pool
+        self.thread_pool = thread_pool
         # use this argparse.Namespace instance for job data specification
         self.argparse_namespace = argparse_namespace
         # use this to keep track of all created subprocess (in case they need killin')
         # yt2mp3.download_convert_split provides an interface for that list.
         self.child_processes = []
+        self.worker_thread = None
 
 
         ################################
@@ -250,18 +254,17 @@ class JobPanel(QWidget):
         # add functionality and controls
         ################################
         # TODO: choose output button (change output location field!)
-        self.run_job_button.clicked.connect(self.run_job)
-        self.stop_job_button.clicked.connect(self.stop_job)
+        self.run_job_button.clicked.connect(self.run_job_callback_fxn)
+        self.stop_job_button.clicked.connect(self.stop_job_callback_fxn)
 
-        self.video_id_url_input.textChanged.connect(self.parse_video_id_url)
-        self.output_location_input.textChanged.connect(self.parse_output_location)
+        self.video_id_url_input.textChanged.connect(self.parse_video_id_url_callback_fxn)
+        self.output_location_input.textChanged.connect(self.parse_output_location_callback_fxn)
 
-        self.segment_output_checkbox.toggled.connect(self.segment_output_state_changed)
-        self.output_segment_duration_input.textChanged.connect(self.parse_output_segment_length)
-        self.output_segment_name_pattern_input.textChanged.connect(self.parse_output_name_pattern)
+        self.segment_output_checkbox.toggled.connect(self.segment_output_state_changed_callback_fxn)
+        self.output_segment_duration_input.textChanged.connect(self.parse_output_segment_length_callback_fxn)
+        self.output_segment_name_pattern_input.textChanged.connect(self.parse_output_name_pattern_callback_fxn)
 
-        #self.output_location_dialog_button.clicked.connect(lambda: print('TODO: Choose button! add QFileDialog popup'))
-        self.output_location_dialog_button.clicked.connect(self.select_output_location_from_qfiledialog)
+        self.output_location_dialog_button.clicked.connect(self.select_output_location_from_qfiledialog_callback_fxn)
 
     def get_args(self, copy=True):
         """
@@ -281,7 +284,7 @@ class JobPanel(QWidget):
         else:
             return self.argparse_namespace
 
-    def parse_video_id_url(self):
+    def parse_video_id_url_callback_fxn(self):
         """
         Attempts to parse video URL output fiel and add its value to self.argparse_namespace
         """
@@ -292,13 +295,13 @@ class JobPanel(QWidget):
         else:
             self.argparse_namespace.video[0] = text
 
-    def parse_output_location(self):
+    def parse_output_location_callback_fxn(self):
         """
         Attempts to parse output path
         """
         self.argparse_namespace.output = self.output_location_input.text()
 
-    def select_output_location_from_qfiledialog(self):
+    def select_output_location_from_qfiledialog_callback_fxn(self):
         """
         Opens a file (right now really only a directory) selection dialogue.
         Allows to browser for an output location (directory).
@@ -320,7 +323,7 @@ class JobPanel(QWidget):
 
 
 
-    def segment_output_state_changed(self):
+    def segment_output_state_changed_callback_fxn(self):
         """
         Activates/deactivates output segmentation parameter fields according to checkbox state
         """
@@ -329,13 +332,13 @@ class JobPanel(QWidget):
         self.output_segment_name_pattern_input.setEnabled(box_is_checked)
 
         if box_is_checked:
-            self.parse_output_segment_length()
+            self.parse_output_segment_length_callback_fxn()
         else:
             self.argparse_namespace.segment_length = None
 
 
 
-    def parse_output_segment_length(self):
+    def parse_output_segment_length_callback_fxn(self):
         """
         Attempts to parse the length of the output segments
         """
@@ -352,80 +355,50 @@ class JobPanel(QWidget):
             self.argparse_namespace.segment_length = None
 
 
-    def parse_output_name_pattern(self):
+    def parse_output_name_pattern_callback_fxn(self):
         """
         Attempts to parse the output name pattern for segmented mp3 files
         """
         self.argparse_namespace.segment_name = self.output_segment_name_pattern_input.text()
 
-    def test_run(self):
-        print('hi, this is {} getting its start button pressed from process {}!'.format(1, current_process().name))
+    def run_job_function(self):
+        """
+        Container function for submission to self.thread_pool
+        holding all necessary functionality for runnanle and stoppable job treads
+        """
+        # TODO: capture stdout + stderr, redirect to self.output_window (needs to happen earlier, upon tab creation)
+        # TODO: write stderr/stdout into qtextwindowthing
+        self.worker_thread = current_thread()
 
-    def run_job(self):
+        # below line collects started threads to the self.child_processes list
+        yt2mp3_utils.check_requirements()
+        yt2mp3.download_convert_split(self.argparse_namespace, self)
+
+        # TODO: gui stuff:
+        #   unlock stop button
+        #   lock param input stuff.
+        #   once done, unlock gui stuff again.
+        #   write nice status updates (idle/waiting/running/done))
+
+
+    def run_job_callback_fxn(self):
         """
         Try to run this JobPanel's job according to parameterization
         """
-
-        # TODO: Implement
-        # TODO: capture stdout + stderr, redirect to self.output_window (needs to happen earlier, upon tab creation)
-        # TODO: only execute stuff if stuff can be executed (ie thread state allows this.)
-
-        # TODO: enable output window
-        # TODO: lock input fields and buttons
-
-        # TODO: unlock gui, once done.
-
-        # first thing: run a requirements check
-        # TODO: use this to test output window functionality
-        yt2mp3_utils.check_requirements()
-        from threading import Thread
-        worker = Thread(target=yt2mp3.download_convert_split, args=(self.argparse_namespace, self))
-        # NOTE: this seems to be an easy and controllable first step, using individual threads
-        # NOTE: Pproblem: youtube-dl's call to ffmpeg for conversion is not terminated properly.
-        #self.child_processes.append(worker)
-        print(self.child_processes)
-        #yt2mp3.download_convert_split(self.argparse_namespace, self)
-        worker.start()
-        #worker.join()
-        #self.worker_pool.apply_async(test_run, (self,))
-
-        # TODO: THE MOST IMPORTANT ONE:
-        # GET REFERENCE OF THREAD RUNNING THIS JOB
-        # MAKE SURE THREAD INTERRUPTION IS POSSIBLE
-        # CHECK THESE SOURCES:
-        # https://stackoverflow.com/questions/11436502/closing-all-threads-with-a-keyboard-interrupt
-        # https://stackoverflow.com/questions/3788208/threading-ignores-keyboardinterrupt-exception
-        # https://stackoverflow.com/questions/42247429/python-threads-exit-with-ctrl-c-in-python
-        # https://stackoverflow.com/questions/49992329/the-workers-in-threadpoolexecutor-is-not-really-daemon
-        # while thread.is_alive() : murder_it_if_stop_pressed()
-        # https://www.g-loaded.eu/2016/11/24/how-to-terminate-running-python-threads-using-signals/
-
-        # first debug thing.
-        print('TODO: JobPanel.run_job')
-        print('running', self.argparse_namespace)
+        self.thread_pool.submit(self.run_job_function)
 
 
-    def stop_job(self):
+    def stop_job_callback_fxn(self):
         """
         Try to stop this JobPanel's job according to parameterization
         """
 
-        # TODO: Implement
-        # TODO: capture stdout + stderr, redirect to self.output_window (needs to happen earlier, upon tab creation)
-        # TODO: only stop stuff if stuff can be executed (ie thread state allows this.)
-
         # TODO: disable output window
         # TODO: unlock input fields and buttons.
 
-        # first thing: run a requirements check
-        #yt2mp3_utils.check_requirements()
-        print(self.child_processes)
         for p in self.child_processes:
-            print('killing ', p)
-            #os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            print('KILLING CHILD PROCESS', p)
             p.kill()
 
-        #self.child_processes = []
-        # first debug thing.
-        print('TODO: JobPanel.stop_job')
-        print('stopping', self.argparse_namespace)
+        self.child_processes = []
+        self.worker_thread = None
