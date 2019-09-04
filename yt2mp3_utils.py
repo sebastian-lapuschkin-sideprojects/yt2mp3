@@ -66,7 +66,6 @@ def check_requirements():
 def download_video(video_url, process_watcher=None):
     """
     Downloads the video behind video_url from youtube using youtube-dl.
-    Then converts it to mp3 using ffmpeg.
     Writes the ID of the downloaded video to a (temporary) txt file and returns the file name
 
     Parameters:
@@ -81,17 +80,11 @@ def download_video(video_url, process_watcher=None):
     Path to the file containing the IDs of the downloaded/created files
     Path to the downloaded mp3 file
     """
-    download_dir = '.tmp-{}-{}'.format(video_id(video_url), datetime.datetime.now())
+    download_dir = '.tmp-{}'.format(video_id(video_url)) #, datetime.datetime.now())
     archive_file = '{}/downloaded.txt'.format(download_dir)
     ensure_dir_exists(download_dir)
     # youtube-dl also provides a command line interface which is more
     # rich and clear than its python API
-    #cmd = ['youtube-dl',
-    #       '--ignore-errors', '--extract-audio',
-    #       '--format', 'bestaudio',
-    #       '--audio-format', 'mp3',
-    #       '--audio-quality', '0',
-    #       '--download-archive', archive_file, video_url]
     cmd = ['youtube-dl',
             '--ignore-errors',
             '--format', 'bestaudio',
@@ -103,9 +96,8 @@ def download_video(video_url, process_watcher=None):
     if process_watcher:
         process_watcher.child_processes.append(proc)
     proc.wait()
+
     assert os.path.isfile(archive_file), 'Download failed for video "{}"'.format(video_url)
-    # archive_content = open(archive_file, 'rt').read().split(' ')[1].strip()
-    # downloaded_file_name = glob.glob('*{}.mp3'.format(archive_content))[0]
     return download_dir, archive_file
 
 
@@ -136,6 +128,7 @@ def video_to_mp3(download_dir, archive_file, process_watcher=None):
     pattern = '{}/*{}.*'.format(download_dir, video_id)
     downloaded_file_name = glob.glob(pattern)[0]
     mp3_file_name = os.path.splitext(downloaded_file_name)[0] + '.mp3'
+    tmp_mp3_file_name = mp3_file_name.replace('.mp3', '.tmp.mp3')
 
     # redundant
     assert os.path.isfile(downloaded_file_name), 'Downloaded file has magically vanished?'
@@ -143,15 +136,17 @@ def video_to_mp3(download_dir, archive_file, process_watcher=None):
     # convert
     cmd = ['ffmpeg',
            '-i', downloaded_file_name,
-           '-vn', mp3_file_name]
+           '-vn', tmp_mp3_file_name]
     proc = subprocess.Popen(cmd)
     if process_watcher:
         process_watcher.child_processes.append(proc)
     proc.wait()
 
-    assert os.path.isfile(mp3_file_name), 'Conversion from Video to MP3 file failed!'
+    assert os.path.isfile(tmp_mp3_file_name), 'Conversion from Video to MP3 file failed! (pre-rename)'
+    shutil.move(tmp_mp3_file_name, mp3_file_name)
+    assert os.path.isfile(mp3_file_name), 'Conversion from Video to MP3 file failed! (post-rename)'
     print('[yt2mp3] MP3 output saved to {}'.format(mp3_file_name))
-    return mp3_file_name, downloaded_file_name
+    return mp3_file_name, downloaded_file_name, tmp_mp3_file_name
 
 
 
@@ -271,7 +266,7 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
     os.remove(downloaded_file_name)
 
 
-def cleanup(download_dir, archive_file, video_file):
+def cleanup(download_dir, archive_file, video_file, tmp_mp3_file_name):
     """
     After a successful execution of all other functions, remove the left-over
     file containing the download file information.
@@ -284,9 +279,11 @@ def cleanup(download_dir, archive_file, video_file):
     archive_file: str or None - the path to the file to remove
 
     video_file: str or None - the downloaded video file
+
+    tmp_mp3_file_name: str or None - a temporary file location for mp3 file conversion
     """
 
-    print(download_dir, archive_file, video_file)
+    print(download_dir, archive_file, video_file, tmp_mp3_file_name)
 
     if archive_file and os.path.isfile(archive_file):
         print('[yt2mp3] Removing download archive file "{}"'.format(archive_file))
@@ -295,6 +292,10 @@ def cleanup(download_dir, archive_file, video_file):
     if video_file and os.path.isfile(video_file):
         print('[yt2mp3] Removing downloaded youtube media file "{}"'.format(video_file))
         os.remove(video_file)
+
+    if tmp_mp3_file_name and os.path.isfile(tmp_mp3_file_name):
+        print('[yt2mp3] Removing temporary mp3 file "{}"'.format(tmp_mp3_file_name))
+        os.remove(tmp_mp3_file_name)
 
     if download_dir and os.path.isdir(download_dir):
         if os.listdir(download_dir):

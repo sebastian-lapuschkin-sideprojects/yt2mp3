@@ -34,15 +34,17 @@ def download_convert_split(args_namespace, process_watcher=None):
 
 
     # prepare some variables
+    # NOTE: PREPARE PATH VARIABLES IN EXTRA FUNCTION. MUST EXIST/BE RETURNED BEFORE subprocess.Popen calls!
     download_dir = None
     archive_file = None
     video_file   = None
     mp3_file     = None
+    tmp_mp3_file = None
 
     try:
         # NOTE: ONLY USES THE FIRST PASSED VIDEO ID OR URL. IGNORES THE REST, FOR NOW.
         download_dir, archive_file = yt2mp3_utils.download_video(args_namespace.video[0], process_watcher)
-        mp3_file, video_file = yt2mp3_utils.video_to_mp3(download_dir, archive_file, process_watcher)
+        mp3_file, video_file, tmp_mp3_file = yt2mp3_utils.video_to_mp3(download_dir, archive_file, process_watcher)
         output_destination = yt2mp3_utils.determine_prepare_output(mp3_file, args_namespace.output, args_namespace.segment_length)
 
         if args_namespace.segment_length is None:
@@ -53,14 +55,14 @@ def download_convert_split(args_namespace, process_watcher=None):
             yt2mp3_utils.split_download_into_segments(mp3_file, output_destination,
                                                     args_namespace.segment_length, args_namespace.segment_name,
                                                     process_watcher)
-        print('[yt2mp3] SUCCESS!')
+        print('[yt2mp3] SUCCESS! OUTPUTS CAN BE FOUND AT {}'.format(output_destination))
     except Exception as e:
         print('[yt2mp3] Bollocks! Process did not finish!')
         print(e)
 
     finally:
         # clean up
-        yt2mp3_utils.cleanup(download_dir, archive_file, video_file)
+        yt2mp3_utils.cleanup(download_dir, archive_file, video_file, tmp_mp3_file)
 
 
 def parse_command_line_args(argument_list=None):
