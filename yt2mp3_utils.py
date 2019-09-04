@@ -7,6 +7,42 @@ import glob
 import shutil
 
 
+def video_id(video_id_or_url):
+    """
+    Returns video id from given video id or url
+
+    Parameters:
+    -----------
+    video_id_or_url: str - either a video id or url
+
+    Returns:
+    --------
+    the video id
+    """
+
+    if 'watch?v=' in video_id_or_url:
+        return video_id_or_url.split('watch?v=')[1]
+    else:
+        # assume we already have an video id
+        return video_id_or_url
+
+def video_url(video_id_or_url):
+    """
+    Returns video url from given video id or url
+
+    Parameters:
+    -----------
+    video_id_or_url: str - either a video id or url
+
+    Returns:
+    --------
+    the video url
+    """
+    # prepare building of proper url
+    vid = video_id(video_id_or_url)
+    return 'https://www.youtube.com/watch?v={}'.format(vid)
+
+
 def check_requirements():
     """
     Checks whether the required applications (ffmpeg, youtube-dl) are installed and callable.
@@ -27,7 +63,7 @@ def check_requirements():
         exit()
 
 
-def download_video_as_mp3(video_url, process_watcher=None):
+def download_video(video_url, process_watcher=None):
     """
     Downloads the video behind video_url from youtube using youtube-dl.
     Then converts it to mp3 using ffmpeg.
@@ -35,7 +71,7 @@ def download_video_as_mp3(video_url, process_watcher=None):
 
     Parameters:
     -----------
-    video_url: str - The youtube video url
+    video_url: str - The youtube video url or id
 
     process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
         This is hacky, but currently the only solution I am aware of.
@@ -45,24 +81,79 @@ def download_video_as_mp3(video_url, process_watcher=None):
     Path to the file containing the IDs of the downloaded/created files
     Path to the downloaded mp3 file
     """
-    archive_file = '.downloaded-{}.txt'.format(datetime.datetime.now())
+    download_dir = '.tmp-{}-{}'.format(video_id(video_url), datetime.datetime.now())
+    archive_file = '{}/downloaded.txt'.format(download_dir)
+    ensure_dir_exists(download_dir)
     # youtube-dl also provides a command line interface which is more
     # rich and clear than its python API
+    #cmd = ['youtube-dl',
+    #       '--ignore-errors', '--extract-audio',
+    #       '--format', 'bestaudio',
+    #       '--audio-format', 'mp3',
+    #       '--audio-quality', '0',
+    #       '--download-archive', archive_file, video_url]
     cmd = ['youtube-dl',
-           '--ignore-errors', '--extract-audio',
-           '--format', 'bestaudio',
-           '--audio-format', 'mp3',
-           '--audio-quality', '0',
-           '--download-archive', archive_file, video_url]
+            '--ignore-errors',
+            '--format', 'bestaudio',
+            '--download-archive', archive_file,
+            '--output', '{}/%(title)s-%(id)s.%(ext)s'.format(download_dir),
+            video_url
+            ]
     proc = subprocess.Popen(cmd)
     if process_watcher:
         process_watcher.child_processes.append(proc)
     proc.wait()
     assert os.path.isfile(archive_file), 'Download failed for video "{}"'.format(video_url)
+    # archive_content = open(archive_file, 'rt').read().split(' ')[1].strip()
+    # downloaded_file_name = glob.glob('*{}.mp3'.format(archive_content))[0]
+    return download_dir, archive_file
 
-    archive_content = open(archive_file, 'rt').read().split(' ')[1].strip()
-    downloaded_file_name = glob.glob('*{}.mp3'.format(archive_content))[0]
-    return archive_file, downloaded_file_name
+
+def video_to_mp3(download_dir, archive_file, process_watcher=None):
+    """
+    Converts a downloaded video to mp3
+
+    Parameters:
+    -----------
+    download_dir: str - the directory the video is currently located in
+
+    archive_file: str - the path to the during the download created archive file holding the video id
+
+    process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
+        This is hacky, but currently the only solution I am aware of.
+
+    Returns:
+    --------
+
+    path to the downloaded mp3 file name
+    """
+
+    assert os.path.isdir(download_dir), "Download directory {} missing!".format(download_dir)
+    assert os.path.isfile(archive_file), "Archive file {} missing! Did the download fail?".format(archive_file)
+    video_id = None
+    with open(archive_file,'rt') as f:
+        video_id = f.read().split(' ')[1].strip()
+    pattern = '{}/*{}.*'.format(download_dir, video_id)
+    downloaded_file_name = glob.glob(pattern)[0]
+    mp3_file_name = os.path.splitext(downloaded_file_name)[0] + '.mp3'
+
+    # redundant
+    assert os.path.isfile(downloaded_file_name), 'Downloaded file has magically vanished?'
+
+    # convert
+    cmd = ['ffmpeg',
+           '-i', downloaded_file_name,
+           '-vn', mp3_file_name]
+    proc = subprocess.Popen(cmd)
+    if process_watcher:
+        process_watcher.child_processes.append(proc)
+    proc.wait()
+
+    assert os.path.isfile(mp3_file_name), 'Conversion from Video to MP3 file failed!'
+    print('[yt2mp3] MP3 output saved to {}'.format(mp3_file_name))
+    return mp3_file_name, downloaded_file_name
+
+
 
 
 def ensure_dir_exists(path_to_dir):
@@ -180,18 +271,35 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
     os.remove(downloaded_file_name)
 
 
-def remove_download_archive_file(archive_file_path):
+def cleanup(download_dir, archive_file, video_file):
     """
     After a successful execution of all other functions, remove the left-over
     file containing the download file information.
 
-    Parametres:
+    Parameters:
     -----------
 
-    archive_file_path: str - the path to the file to remove
+    download_dir: str or None - the directory the temp files are/have been in
+
+    archive_file: str or None - the path to the file to remove
+
+    video_file: str or None - the downloaded video file
     """
 
-    assert os.path.isfile(archive_file_path),\
-        "File {} can not be removed, as it does not exist!".format(archive_file_path)
-    print('[yt2mp3] Removing download archive file "{}"'.format(archive_file_path))
-    os.remove(archive_file_path)
+    print(download_dir, archive_file, video_file)
+
+    if archive_file and os.path.isfile(archive_file):
+        print('[yt2mp3] Removing download archive file "{}"'.format(archive_file))
+        os.remove(archive_file)
+
+    if video_file and os.path.isfile(video_file):
+        print('[yt2mp3] Removing downloaded youtube media file "{}"'.format(video_file))
+        os.remove(video_file)
+
+    if download_dir and os.path.isdir(download_dir):
+        if os.listdir(download_dir):
+            print('[yt2mp3] Keeping non-empty output directory {}'.format(download_dir))
+        else:
+            print('[yt2mp3] Removing empty output directory "{}"'.format(download_dir))
+            os.rmdir(download_dir)
+

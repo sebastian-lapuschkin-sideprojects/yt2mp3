@@ -32,20 +32,35 @@ def download_convert_split(args_namespace, process_watcher=None):
     # for this it might make sense to introduce a simple batch job description language.
     # time will tell.
 
-    # NOTE: ONLY USES THE FIRST PASSED VIDEO ID OR URL. IGNORES THE REST, FOR NOW. TODO: IMPROVE
-    archive_file_path, downloaded_file = yt2mp3_utils.download_video_as_mp3(args_namespace.video[0], process_watcher)
-    output_destination = yt2mp3_utils.determine_prepare_output(downloaded_file, args_namespace.output, args_namespace.segment_length)
-    if args_namespace.segment_length is None:
-        # no segments but single file: move output
-        yt2mp3_utils.move_download_to_output(downloaded_file, output_destination)
-    else:
-        # split mp3 into segments
-        yt2mp3_utils.split_download_into_segments(downloaded_file, output_destination,
-                                                  args_namespace.segment_length, args_namespace.segment_name,
-                                                  process_watcher)
 
-    # clean up
-    yt2mp3_utils.remove_download_archive_file(archive_file_path)
+    # prepare some variables
+    download_dir = None
+    archive_file = None
+    video_file   = None
+    mp3_file     = None
+
+    try:
+        # NOTE: ONLY USES THE FIRST PASSED VIDEO ID OR URL. IGNORES THE REST, FOR NOW.
+        download_dir, archive_file = yt2mp3_utils.download_video(args_namespace.video[0], process_watcher)
+        mp3_file, video_file = yt2mp3_utils.video_to_mp3(download_dir, archive_file, process_watcher)
+        output_destination = yt2mp3_utils.determine_prepare_output(mp3_file, args_namespace.output, args_namespace.segment_length)
+
+        if args_namespace.segment_length is None:
+            # no segments but single file: move output
+            yt2mp3_utils.move_download_to_output(mp3_file, output_destination)
+        else:
+            # split mp3 into segments
+            yt2mp3_utils.split_download_into_segments(mp3_file, output_destination,
+                                                    args_namespace.segment_length, args_namespace.segment_name,
+                                                    process_watcher)
+        print('[yt2mp3] SUCCESS!')
+    except Exception as e:
+        print('[yt2mp3] Bollocks! Process did not finish!')
+        print(e)
+
+    finally:
+        # clean up
+        yt2mp3_utils.cleanup(download_dir, archive_file, video_file)
 
 
 def parse_command_line_args(argument_list=None):
