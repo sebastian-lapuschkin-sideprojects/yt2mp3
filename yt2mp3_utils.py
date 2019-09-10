@@ -136,7 +136,7 @@ def video_to_mp3(download_dir, archive_file, process_watcher=None):
     # convert
     cmd = ['ffmpeg',
            '-i', downloaded_file_name,
-           '-q:a', '2',
+           '-q:a', '0',
            '-vn', tmp_mp3_file_name]
     proc = subprocess.Popen(cmd)
     if process_watcher:
