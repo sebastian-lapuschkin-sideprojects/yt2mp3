@@ -5,6 +5,7 @@ import datetime
 import os
 import glob
 import shutil
+import pty
 
 
 def video_id(video_id_or_url):
@@ -92,9 +93,11 @@ def download_video(video_url, process_watcher=None):
             '--output', '{}/%(title)s-%(id)s.%(ext)s'.format(download_dir),
             video_url
             ]
-    proc = subprocess.Popen(cmd)
     if process_watcher:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         process_watcher.child_processes.append(proc)
+    else:
+        proc = subprocess.Popen(cmd)
     proc.wait()
 
     assert os.path.isfile(archive_file), 'Download failed for video "{}"'.format(video_url)
@@ -138,9 +141,11 @@ def video_to_mp3(download_dir, archive_file, process_watcher=None):
            '-i', downloaded_file_name,
            '-q:a', '0',
            '-vn', tmp_mp3_file_name]
-    proc = subprocess.Popen(cmd)
     if process_watcher:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         process_watcher.child_processes.append(proc)
+    else:
+        proc = subprocess.Popen(cmd)
     proc.wait()
 
     assert os.path.isfile(tmp_mp3_file_name), 'Conversion from Video to MP3 file failed! (pre-rename)'
@@ -254,9 +259,11 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
            ]
 
     print('[yt2mp3] Splitting downloaded file "{}" into segments "{}"'.format(downloaded_file_name, segment_naming_pattern))
-    proc = subprocess.Popen(cmd)
     if process_watcher:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         process_watcher.child_processes.append(proc)
+    else:
+        proc = subprocess.Popen(cmd)
     proc.wait()
 
     assert len(glob.glob('{}/*.mp3'.format(output_destination))) > 0,\
