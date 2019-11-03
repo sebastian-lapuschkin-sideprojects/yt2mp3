@@ -133,13 +133,14 @@ class MainWindow(QWidget):
         else:
             argparse_namespace = yt2mp3.parse_command_line_args()
 
-        new_tab = JobPanel(self.worker_thread_pool, self.gui_communicator_thread_pool, argparse_namespace)
         new_tab_name = 'Job {}'.format(self.tabs_created)
+        new_tab = JobPanel(self.worker_thread_pool, self.gui_communicator_thread_pool, argparse_namespace)
 
         self.tab_panel.addTab(new_tab, new_tab_name)
         self.tabs_created += 1
 
         self.tab_panel.setCurrentIndex(active_tab_index+1)
+        # NOTE: tab widgets and their proparties can only be accessed and changed by index. this may render dynamically changing tab text difficult
 
     def close_tab(self, index):
         """
@@ -154,7 +155,8 @@ class MainWindow(QWidget):
         Attempts to run all jobs in the job panel
         """
         for i in range(len(self.tab_panel)):
-            self.tab_panel.widget(i).run_job_callback_fxn()
+            if self.tab_panel.widget(i).is_runnable():
+                self.tab_panel.widget(i).run_job_callback_fxn()
 
     def stop_all_jobs(self):
         """

@@ -61,6 +61,7 @@ class JobPanel(QWidget):
         self.child_processes = []
         self.worker_thread = None
         self.communicator_thread = None
+        self.containing_tab = None
         self.job_status = JobPanel.STATUS_IDLE
 
 
@@ -144,7 +145,6 @@ class JobPanel(QWidget):
         ################################
         # add functionality and controls
         ################################
-        # TODO: choose output button (change output location field!)
         self.run_job_button.clicked.connect(self.run_job_callback_fxn)
         self.stop_job_button.clicked.connect(self.stop_job_callback_fxn)
 
@@ -156,6 +156,49 @@ class JobPanel(QWidget):
         self.output_segment_name_pattern_input.textChanged.connect(self.parse_output_name_pattern_callback_fxn)
 
         self.output_location_dialog_button.clicked.connect(self.select_output_location_from_qfiledialog_callback_fxn)
+
+        # configure UI activity status
+        self.update_user_interface()
+
+    def is_runnable(self):
+        """
+        Are all required arguments present to run the job?
+        """
+        if self.job_status in [JobPanel.STATUS_SUBMITTED, JobPanel.STATUS_RUNNING]:
+            return False
+        elif not (self.argparse_namespace.video and self.argparse_namespace.output):
+            return False
+        elif self.segment_output_checkbox.isChecked() and not (self.argparse_namespace.segment_name and self.argparse_namespace.segment_length and self.argparse_namespace.segment_length > 0):
+            return False
+        else:
+            return True
+
+    def update_user_interface(self):
+        """
+        Enables/disables UI elements wrt process status and/or enterd data.
+        """
+        #TODO USE ICONS IN TABS: MAKE TABS LONGER. SET TAB NAME FROM OUTPUT COLCATION NAME
+        if self.job_status == JobPanel.STATUS_IDLE:
+            self.stop_job_button.setEnabled(False)
+            if self.is_runnable():
+                self.run_job_button.setEnabled(True)
+            else:
+                self.run_job_button.setEnabled(False)
+
+        elif self.job_status == JobPanel.STATUS_SUBMITTED:
+            pass
+        elif self.job_status == JobPanel.STATUS_RUNNING:
+            pass
+        elif self.job_status == JobPanel.STATUS_FINISHED:
+            pass
+        elif self.job_status == JobPanel.STATUS_STOPPED:
+            pass
+        else:
+            raise Exception('Unknown job status id {}'.format(self.job_status))
+
+
+
+
 
     def get_args(self, copy=True):
         """
@@ -189,11 +232,16 @@ class JobPanel(QWidget):
         else:
             self.argparse_namespace.video[0] = text
 
+        # update UI elements
+        self.update_user_interface()
+
     def parse_output_location_callback_fxn(self):
         """
         Attempts to parse output path
         """
         self.argparse_namespace.output = self.output_location_input.text()
+        # update UI elements
+        self.update_user_interface()
 
     def select_output_location_from_qfiledialog_callback_fxn(self):
         """
@@ -212,7 +260,6 @@ class JobPanel(QWidget):
             output_dir = dialog.selectedFiles()[0]
             self.output_location_input.setText(output_dir)
             # NOTE: triggers self.output_location_input.textChanged
-
 
     def segment_output_state_changed_callback_fxn(self):
         """
@@ -239,11 +286,12 @@ class JobPanel(QWidget):
             try:
                 self.argparse_namespace.segment_length = int(text)
             except ValueError:
-                # TODO: properly take care of this. Write error message to self.output_window
-                # TODO: In general think about whether there might be a better solution than manual parsing.
+                self.argparse_namespace.segment_length = -1
                 pass
         else:
             self.argparse_namespace.segment_length = None
+        # update UI elements
+        self.update_user_interface()
 
 
     def parse_output_name_pattern_callback_fxn(self):
@@ -251,6 +299,8 @@ class JobPanel(QWidget):
         Attempts to parse the output name pattern for segmented mp3 files
         """
         self.argparse_namespace.segment_name = self.output_segment_name_pattern_input.text()
+        # update UI elements
+        self.update_user_interface()
 
     def run_job_function(self):
         """
@@ -261,6 +311,8 @@ class JobPanel(QWidget):
         # TODO: write stderr/stdout into qtextwindowthing
         self.worker_thread = current_thread()
         self.job_status = JobPanel.STATUS_RUNNING
+        # update UI elements
+        self.update_user_interface()
 
         try:
             print(self.argparse_namespace)
@@ -271,6 +323,8 @@ class JobPanel(QWidget):
             print(e)
 
         self.job_status = JobPanel.STATUS_FINISHED
+        # update UI elements
+        self.update_user_interface()
 
         # TODO: gui stuff:
         #   unlock stop button
@@ -296,6 +350,9 @@ class JobPanel(QWidget):
         self.job_status = JobPanel.STATUS_SUBMITTED
         # self.communicator_thread_pool.submit(self.update_process_output)
 
+        # update UI elements
+        self.update_user_interface()
+
 
     def stop_job_callback_fxn(self):
         """
@@ -314,6 +371,8 @@ class JobPanel(QWidget):
         self.child_processes = []
         self.worker_thread = None
         self.communicator_thread = None
+        # update UI elements
+        self.update_user_interface()
 
     def get_process_output(self, timeout):
         """
