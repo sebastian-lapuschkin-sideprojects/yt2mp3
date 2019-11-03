@@ -220,6 +220,7 @@ class JobPanel(QWidget):
             raise Exception('Unknown job status id {}'.format(self.job_status))
         #TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
         #TODO: handle FAILED PROCESS CASES
+        #TODO: add function to: find "self" in parent tab widget, then change name/icon of "self"'s index in parent tab widget.
 
 
 
