@@ -173,25 +173,48 @@ class JobPanel(QWidget):
         else:
             return True
 
+    def is_stoppable(self):
+        """
+        Is there anything in this job, which can be stopped?
+        """
+        return self.job_status in [JobPanel.STATUS_RUNNING, JobPanel.STATUS_SUBMITTED]
+
     def update_user_interface(self):
         """
         Enables/disables UI elements wrt process status and/or enterd data.
         """
         #TODO USE ICONS IN TABS: MAKE TABS LONGER. SET TAB NAME FROM OUTPUT COLCATION NAME
         if self.job_status == JobPanel.STATUS_IDLE:
+            self.video_id_url_input.setEnabled(True)
+            self.output_location_input.setEnabled(True)
             self.stop_job_button.setEnabled(False)
+            self.output_window.setEnabled(False)
             if self.is_runnable():
                 self.run_job_button.setEnabled(True)
             else:
                 self.run_job_button.setEnabled(False)
 
+        # TODO: CONTINUE HERE ONCE STABLE INTERNET IS OBTAINABLE FOR TESTING
         elif self.job_status == JobPanel.STATUS_SUBMITTED:
+            #TODO: ADD WAY TO TERMINATE THREAD WHILE IN SUBMITTET STATUS.
+            # TODO: GUI
+            # deactivate input fields
+            # deactivate start button
+            # activate process output window
             pass
         elif self.job_status == JobPanel.STATUS_RUNNING:
             pass
         elif self.job_status == JobPanel.STATUS_FINISHED:
+            # TODO: gui stuff:
+            #   unlock stop button
+            #   lock param input stuff.
+            #   once done, unlock gui stuff again.
+            #   write nice status updates (idle/waiting/running/done))
             pass
         elif self.job_status == JobPanel.STATUS_STOPPED:
+            # TODO: disable output window
+            # TODO: unlock input fields and buttons.
+            # TODO: avoid execution of follow-up jobs
             pass
         else:
             raise Exception('Unknown job status id {}'.format(self.job_status))
@@ -307,16 +330,14 @@ class JobPanel(QWidget):
         Container function for submission to self.thread_pool
         holding all necessary functionality for runnanle and stoppable job treads
         """
-        # TODO: capture stdout + stderr, redirect to self.output_window (needs to happen earlier, upon tab creation)
-        # TODO: write stderr/stdout into qtextwindowthing
-        self.worker_thread = current_thread()
+        if self.thread_level_job_stop_check(): return
+
         self.job_status = JobPanel.STATUS_RUNNING
-        # update UI elements
+        self.worker_thread = current_thread()
         self.update_user_interface()
 
         try:
             print(self.argparse_namespace)
-            # below line collects started threads to the self.child_processes list
             yt2mp3_utils.check_requirements()
             yt2mp3.download_convert_split(self.argparse_namespace, self)
         except Exception as e:
@@ -325,13 +346,6 @@ class JobPanel(QWidget):
         self.job_status = JobPanel.STATUS_FINISHED
         # update UI elements
         self.update_user_interface()
-
-        # TODO: gui stuff:
-        #   unlock stop button
-        #   lock param input stuff.
-        #   once done, unlock gui stuff again.
-        #   write nice status updates (idle/waiting/running/done))
-
 
     def update_process_output(self):
         self.communicator_thread = current_thread()
@@ -345,7 +359,6 @@ class JobPanel(QWidget):
         """
         Try to run this JobPanel's job according to parameterization
         """
-        # TODO: take care to not re-run jobs. once they are FINISHED
         self.worker_thread_pool.submit(self.run_job_function)
         self.job_status = JobPanel.STATUS_SUBMITTED
         # self.communicator_thread_pool.submit(self.update_process_output)
@@ -353,21 +366,24 @@ class JobPanel(QWidget):
         # update UI elements
         self.update_user_interface()
 
+    def thread_level_job_stop_check(self):
+        if self.job_status == JobPanel.STATUS_STOPPED:
+            self.update_user_interface()
+            return True
+        else:
+            return False
 
     def stop_job_callback_fxn(self):
         """
         Try to stop this JobPanel's job according to parameterization
         """
 
-        # TODO: disable output window
-        # TODO: unlock input fields and buttons.
-        # TODO: avoid execution of follow-up jobs
+        self.job_status = JobPanel.STATUS_STOPPED
 
         for p in self.child_processes:
             print('KILLING CHILD PROCESS', p)
             p.kill()
 
-        self.job_status = JobPanel.STATUS_STOPPED
         self.child_processes = []
         self.worker_thread = None
         self.communicator_thread = None

@@ -163,7 +163,8 @@ class MainWindow(QWidget):
         Attempts to stop all jobs in the job panel
         """
         for i in range(len(self.tab_panel)):
-            self.tab_panel.widget(i).stop_job_callback_fxn()
+            if self.tab_panel.widget(i).is_stoppable():
+                self.tab_panel.widget(i).stop_job_callback_fxn()
 
     def closeEvent(self, event):
         self.stop_all_jobs()
