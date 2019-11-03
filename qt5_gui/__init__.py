@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QMainWindow      # pylint: disable=F0401
 from PyQt5.QtWidgets import QApplication     # pylint: disable=F0401
 from PyQt5.QtWidgets import QPushButton      # pylint: disable=F0401
 from PyQt5.QtWidgets import QWidget          # pylint: disable=F0401
+from PyQt5.QtWidgets import QLabel           # pylint: disable=F0401
 from PyQt5.QtWidgets import QAction          # pylint: disable=F0401
 from PyQt5.QtWidgets import QTabWidget       # pylint: disable=F0401
 from PyQt5.QtWidgets import QVBoxLayout      # pylint: disable=F0401
@@ -75,10 +76,42 @@ class MainWindow(QWidget):
         self.run_all_jobs_button = QPushButton('Run all')   # button to run all runnable (not yet running and un-run) jobs
         self.stop_all_jobs_button = QPushButton('Stop all') # button to terminate all running jobs
 
+        #labels for summarizing job stati
+        self.previous_job_stati = None # memorize the previously received status to avoid uneccessary rendering.
+        self.status_widget = QWidget()
+        self.job_status_layout = QGridLayout()
+        self.status_widget.setLayout(self.job_status_layout)
+
+
+        self.n_jobs_idle_label = QLabel('Idle:')
+        self.n_jobs_idle_number_label = QLabel('?')
+        self.n_jobs_submitted_label = QLabel('Submitted:')
+        self.n_jobs_submitted_number_label = QLabel('?')
+        self.n_jobs_running_label = QLabel('Running:')
+        self.n_jobs_running_number_label = QLabel('?')
+        self.n_jobs_finished_label = QLabel('Finished:')
+        self.n_jobs_finished_number_label = QLabel('?')
+        self.n_jobs_stopped_label = QLabel('Stopped:')
+        self.n_jobs_stopped_number_label = QLabel('?')
+
+        self.job_status_layout.addWidget(self.n_jobs_idle_label, 0, 0)
+        self.job_status_layout.addWidget(self.n_jobs_idle_number_label, 0, 1)
+        self.job_status_layout.addWidget(self.n_jobs_submitted_label, 1, 0)
+        self.job_status_layout.addWidget(self.n_jobs_submitted_number_label, 1, 1)
+        self.job_status_layout.addWidget(self.n_jobs_running_label, 2, 0)
+        self.job_status_layout.addWidget(self.n_jobs_running_number_label, 2, 1)
+        self.job_status_layout.addWidget(self.n_jobs_stopped_label, 3, 0)
+        self.job_status_layout.addWidget(self.n_jobs_stopped_number_label, 3, 1)
+        self.job_status_layout.addWidget(self.n_jobs_finished_label, 4, 0)
+        self.job_status_layout.addWidget(self.n_jobs_finished_number_label, 4, 1)
+
+
         self.button_panel = QWidget()                       # widget and layout to group buttons
         button_layout = QVBoxLayout(self)
 
         button_layout.addWidget(self.add_tab_button)        # assemble buttons
+        button_layout.addStretch()                          # add some spacing
+        button_layout.addWidget(self.status_widget)
         button_layout.addStretch()                          # add some spacing
         button_layout.addWidget(self.run_all_jobs_button)
         button_layout.addWidget(self.stop_all_jobs_button)
@@ -110,17 +143,32 @@ class MainWindow(QWidget):
         self.stop_all_jobs_button.clicked.connect(self.stop_all_jobs)
 
         self.process_output_monitor.update_output.connect(self.handle_process_output)
+        self.process_output_monitor.update_stati.connect(self.handle_process_status_summary)
         self.process_output_monitor.monitor_outputs()
 
         self.show()
 
 
-    #def handle_process_output(self, job_panel, txt):
+
     @pyqtSlot(JobPanel, str)
     def handle_process_output(self, job_panel, msg):
         job_panel.output_window.insertPlainText(msg)
         job_panel.output_window.moveCursor(QtGui.QTextCursor.End)
 
+
+
+    @pyqtSlot(dict)
+    def handle_process_status_summary(self, status_dict):
+        #TODO: redesign and use a grid layout for that. keep one label fixed, modify numerical label only.
+        if not status_dict == self.previous_job_stati:
+            # if we receive a real update, render status text.
+            self.n_jobs_idle_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_IDLE]))
+            self.n_jobs_submitted_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_SUBMITTED]))
+            self.n_jobs_running_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_RUNNING]))
+            self.n_jobs_finished_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_FINISHED]))
+            self.n_jobs_stopped_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_STOPPED]))
+            # remember current values
+            self.previous_job_stati = status_dict
 
 
     def add_tab(self):

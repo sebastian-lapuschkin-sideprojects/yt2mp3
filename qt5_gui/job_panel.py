@@ -107,6 +107,7 @@ class JobPanel(QWidget):
 
         self.run_job_button = QPushButton('Run')
         self.stop_job_button = QPushButton('Stop')
+        self.job_status_label = QLabel('')
 
         ##############
         # assemble tab
@@ -120,7 +121,7 @@ class JobPanel(QWidget):
         layout.addWidget(self.output_location_input, 1, 1)
         layout.addWidget(self.output_location_dialog_button, 1, 2)
 
-        layout.setRowStretch(2,1)  # allows the constructio of "empty lines"
+        layout.setRowStretch(2,1)  # allows the construction of "empty lines"
 
         layout.addWidget(self.segment_output_label, 3, 0)
         layout.addWidget(self.segment_output_checkbox, 3, 1)
@@ -137,6 +138,7 @@ class JobPanel(QWidget):
         layout.setRowStretch(6,1)
 
         layout.addWidget(self.output_window_label, 7, 0)
+        layout.addWidget(self.job_status_label, 7, 2)
         layout.addWidget(self.output_window, 8, 0, 1, 3)
         layout.setRowStretch(8, 2)  # make output text box two rows high
 
@@ -185,6 +187,7 @@ class JobPanel(QWidget):
         """
         #TODO USE ICONS IN TABS: MAKE TABS LONGER. SET TAB NAME FROM OUTPUT COLCATION NAME
         if self.job_status == JobPanel.STATUS_IDLE:
+            self.job_status_label.setText('Status: Idle')
             self.video_id_url_input.setEnabled(True)
             self.output_location_input.setEnabled(True)
             self.stop_job_button.setEnabled(False)
@@ -196,6 +199,7 @@ class JobPanel(QWidget):
 
         # TODO: CONTINUE HERE ONCE STABLE INTERNET IS OBTAINABLE FOR TESTING
         elif self.job_status == JobPanel.STATUS_SUBMITTED:
+            self.job_status_label.setText('Status: Submitted')
             #TODO: ADD WAY TO TERMINATE THREAD WHILE IN SUBMITTET STATUS.
             # TODO: GUI
             # deactivate input fields
@@ -203,8 +207,10 @@ class JobPanel(QWidget):
             # activate process output window
             pass
         elif self.job_status == JobPanel.STATUS_RUNNING:
+            self.job_status_label.setText('Status: Running')
             pass
         elif self.job_status == JobPanel.STATUS_FINISHED:
+            self.job_status_label.setText('Status: Finished')
             # TODO: gui stuff:
             #   unlock stop button
             #   lock param input stuff.
@@ -212,6 +218,7 @@ class JobPanel(QWidget):
             #   write nice status updates (idle/waiting/running/done))
             pass
         elif self.job_status == JobPanel.STATUS_STOPPED:
+            self.job_status_label.setText('Status: Stopped')
             # TODO: disable output window
             # TODO: unlock input fields and buttons.
             # TODO: avoid execution of follow-up jobs
@@ -219,8 +226,10 @@ class JobPanel(QWidget):
         else:
             raise Exception('Unknown job status id {}'.format(self.job_status))
         #TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
-        #TODO: handle FAILED PROCESS CASES
+        #TODO: handle FAILED PROCESS CASES (check if stderr is not empty or sth liek this. or output dir does not exist,...)
         #TODO: add function to: find "self" in parent tab widget, then change name/icon of "self"'s index in parent tab widget.
+
+        #TODO: Add Job Status UI element and overview element (text, maybe even an Icon).
 
 
 

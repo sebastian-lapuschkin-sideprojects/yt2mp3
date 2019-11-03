@@ -11,10 +11,8 @@ class ProcessOutputMonitor(QObject):
     """
     A Monitor for handling subprocess communication
     """
-    update_output = pyqtSignal(JobPanel, str)  # the signal
-    #update_output = pyqtSignal(str)  # the signal
-    #update_output = pyqtSignal(str)
-    #update_output = pyqtSignal()
+    update_output = pyqtSignal(JobPanel, str)   # the text output signals
+    update_stati = pyqtSignal(dict)             # process status signals
 
     def __init__(self, tab_panel):
         super(QObject, self).__init__()
@@ -35,13 +33,21 @@ class ProcessOutputMonitor(QObject):
         print('MONITOR RUNNING!')
         # DUMMY FUNCTIONALITY. REPLACE WITH READING FROM jobPanel child process pipes
         while not self.stopped:
+            job_stati = {   JobPanel.STATUS_IDLE:0,
+                            JobPanel.STATUS_SUBMITTED:0,
+                            JobPanel.STATUS_RUNNING:0,
+                            JobPanel.STATUS_STOPPED:0,
+                            JobPanel.STATUS_FINISHED:0
+                        }
             for i in range(len(self.tabs)):
                 try:
                     job_panel = self.tabs.widget(i)
+                    job_stati[job_panel.job_status] += 1
                     msg = job_panel.get_process_output(timeout=0.1) #NO TIMEOUT NEEDED. NOTE .
                     if msg:
                         self.update_output.emit(job_panel, msg)
                 except Exception as e:
                     print(e)
-            time.sleep(0.005)
+            self.update_stati.emit(job_stati)
+            time.sleep(0.01)
         print('MONITOR STOPPED!')
