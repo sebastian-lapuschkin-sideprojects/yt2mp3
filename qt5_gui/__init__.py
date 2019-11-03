@@ -143,6 +143,7 @@ class MainWindow(QWidget):
         self.stop_all_jobs_button.clicked.connect(self.stop_all_jobs)
 
         self.process_output_monitor.update_output.connect(self.handle_process_output)
+        self.process_output_monitor.update_tabnames.connect(self.handle_output_path_change)
         self.process_output_monitor.update_stati.connect(self.handle_process_status_summary)
         self.process_output_monitor.monitor_outputs()
 
@@ -155,6 +156,11 @@ class MainWindow(QWidget):
         job_panel.output_window.insertPlainText(msg)
         job_panel.output_window.moveCursor(QtGui.QTextCursor.End)
 
+
+    @pyqtSlot(int, str)
+    def handle_output_path_change(self, i, name):
+        #TODO IMPLEMENT SOMETHING REASONABLE. DO NOT UPDATE ALL THE TIME.
+        self.tab_panel.setTabText(i, name)
 
 
     @pyqtSlot(dict)

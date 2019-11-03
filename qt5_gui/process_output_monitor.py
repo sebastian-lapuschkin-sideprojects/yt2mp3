@@ -5,6 +5,7 @@ from .job_panel import JobPanel
 from threading import current_thread
 from threading import Thread
 
+import os
 import time
 
 class ProcessOutputMonitor(QObject):
@@ -13,6 +14,7 @@ class ProcessOutputMonitor(QObject):
     """
     update_output = pyqtSignal(JobPanel, str)   # the text output signals
     update_stati = pyqtSignal(dict)             # process status signals
+    update_tabnames = pyqtSignal(int, str)      # process tab names
 
     def __init__(self, tab_panel):
         super(QObject, self).__init__()
@@ -21,7 +23,7 @@ class ProcessOutputMonitor(QObject):
         self.stopped = False
 
     def monitor_outputs(self):
-        self.monitor = Thread(target=self._monitor_outputs) #, parent=self)
+        self.monitor = Thread(target=self._monitor_job_panels) #, parent=self)
         self.monitor.deamon = True
         self.monitor.setName('Process Output Monitor Thread')
         self.monitor.start()
@@ -29,7 +31,7 @@ class ProcessOutputMonitor(QObject):
     def stop(self):
         self.stopped = True
 
-    def _monitor_outputs(self):
+    def _monitor_job_panels(self):
         print('MONITOR RUNNING!')
         # DUMMY FUNCTIONALITY. REPLACE WITH READING FROM jobPanel child process pipes
         while not self.stopped:
@@ -43,6 +45,7 @@ class ProcessOutputMonitor(QObject):
                 try:
                     job_panel = self.tabs.widget(i)
                     job_stati[job_panel.job_status] += 1
+                    #self.update_tabnames.emit(i, os.path.basename(job_panel.output_location_input.text())) # This is too wasteful and not ok.
                     msg = job_panel.get_process_output(timeout=0.1) #NO TIMEOUT NEEDED. NOTE .
                     if msg:
                         self.update_output.emit(job_panel, msg)
