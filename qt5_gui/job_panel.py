@@ -227,6 +227,8 @@ class JobPanel(QWidget):
             raise Exception('Unknown job status id {}'.format(self.job_status))
         #TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
         #TODO: handle FAILED PROCESS CASES (check if stderr is not empty or sth liek this. or output dir does not exist,...)
+        #TODO IN case of a failed job. the .tmp-VIDID should still exist.
+        #TODO add job cleanup button to kill remaining .tmp-folders
         #TODO: add function to: find "self" in parent tab widget, then change name/icon of "self"'s index in parent tab widget.
 
         #TODO: Add Job Status UI element and overview element (text, maybe even an Icon).
