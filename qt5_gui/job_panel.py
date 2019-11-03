@@ -218,6 +218,8 @@ class JobPanel(QWidget):
             pass
         else:
             raise Exception('Unknown job status id {}'.format(self.job_status))
+        #TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
+        #TODO: handle FAILED PROCESS CASES
 
 
 
