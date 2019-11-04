@@ -32,8 +32,7 @@ class ProcessOutputMonitor(QObject):
         self.stopped = True
 
     def _monitor_job_panels(self):
-        print('MONITOR RUNNING!')
-        # DUMMY FUNCTIONALITY. REPLACE WITH READING FROM jobPanel child process pipes
+
         while not self.stopped:
             job_status_summary = {   JobPanel.STATUS_IDLE:0,
                             JobPanel.STATUS_SUBMITTED:0,
@@ -55,5 +54,4 @@ class ProcessOutputMonitor(QObject):
                     print(e)
             self.update_stati.emit(job_status_summary)
             self.update_tabinfo.emit(tab_information)
-            time.sleep(1/20)
-        print('MONITOR STOPPED!')
+            time.sleep(1/20) # update frequency of 20 hz
