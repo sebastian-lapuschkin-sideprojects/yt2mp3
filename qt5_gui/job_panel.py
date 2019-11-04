@@ -168,10 +168,16 @@ class JobPanel(QWidget):
         Are all required arguments present to run the job?
         """
         if self.job_status in [JobPanel.STATUS_SUBMITTED, JobPanel.STATUS_RUNNING]:
+            # currently submitted stuff can not be re-submitted
             return False
         elif not (self.argparse_namespace.video and self.argparse_namespace.output):
+            # can not run incomplete input sets
             return False
         elif self.segment_output_checkbox.isChecked() and not (self.argparse_namespace.segment_name and self.argparse_namespace.segment_length and self.argparse_namespace.segment_length > 0):
+            # can not run incomplete optional input sets
+            return False
+        elif self.job_status in [JobPanel.STATUS_FINISHED]:
+            # no running of finished jobs to avoid overwriting of results.
             return False
         else:
             return True
@@ -190,67 +196,75 @@ class JobPanel(QWidget):
         for a in args:
             a.setEnabled(False)
 
+    def gui_to_edit_mode(self):
+        """
+        enable/disabled gui elements corresponding to a passive state of the job
+        """
+        self.enable_these_elements(self.video_id_url_input,
+                                   self.output_location_input,
+                                   self.output_location_dialog_button,
+                                   self.segment_output_checkbox)
+        if self.segment_output_checkbox.isChecked():
+            self.enable_these_elements(self.output_segment_name_pattern_input,
+                                       self.output_segment_duration_input)
+        self.disable_these_elements(self.stop_job_button,
+                                    self.output_window)
+
+        if self.is_runnable():
+            self.enable_these_elements(self.run_job_button)
+        else:
+            self.disable_these_elements(self.run_job_button)
+
+    def gui_to_submitted_mode(self):
+        """
+        enable/disable gui elements corresponding to an active state of the job
+        """
+        self.enable_these_elements( self.output_window,
+                                    self.stop_job_button)
+        self.disable_these_elements(self.run_job_button,
+                                    self.video_id_url_input,
+                                    self.output_location_input,
+                                    self.output_location_dialog_button,
+                                    self.segment_output_checkbox,
+                                    self.output_segment_duration_input,
+                                    self.output_segment_name_pattern_input)
+
+
     def update_user_interface(self):
         """
         Enables/disables UI elements wrt process status and/or enterd data.
         """
         if self.job_status == JobPanel.STATUS_IDLE:
             self.job_status_label.setText('Status: Idle')
-            self.enable_these_elements(self.video_id_url_input,
-                                       self.output_location_input)
-            self.disable_these_elements(self.stop_job_button,
-                                        self.output_window)
-            if self.is_runnable():
-                self.enable_these_elements(self.run_job_button)
-            else:
-                self.disable_these_elements(self.run_job_button)
+            self.gui_to_edit_mode()
 
-        # TODO: CONTINUE HERE ONCE STABLE INTERNET IS OBTAINABLE FOR TESTING
         elif self.job_status == JobPanel.STATUS_SUBMITTED:
             self.job_status_label.setText('Status: Submitted')
-            #TODO: ADD WAY TO TERMINATE THREAD WHILE IN SUBMITTET STATUS.
-            # TODO: GUI
-            # deactivate input fields
-            # deactivate start button
-            # activate process output window
-            pass
+            self.gui_to_submitted_mode()
+
         elif self.job_status == JobPanel.STATUS_RUNNING:
             self.job_status_label.setText('Status: Running')
-            print(self.job_status)
-            print('running')
-            pass
+            # comes after running. no change in UI elements
 
         elif self.job_status == JobPanel.STATUS_FINISHED:
             self.job_status_label.setText('Status: Finished')
-            # TODO: gui stuff:
-            #   unlock stop button
-            #   lock param input stuff.
-            #   once done, unlock gui stuff again.
-            #   write nice status updates (idle/waiting/running/done))
-            pass
+            # keep inputs deactivated. all of them.
+            self.disable_these_elements(self.stop_job_button)
+
         elif self.job_status == JobPanel.STATUS_STOPPED:
             self.job_status_label.setText('Status: Stopped')
-            print('stopped')
-            # TODO: disable output window
-            # TODO: unlock input fields and buttons.
-            # TODO: avoid execution of follow-up jobs
-            pass
+            self.gui_to_edit_mode()
+            # reactivate inputs to allow editing/fixing of wrong params
+
         elif self.job_status == JobPanel.STATUS_FAILED:
             self.job_status_label.setText('Status: Failed')
-            print('failed')
+            self.gui_to_edit_mode()
+            # reactivate inputs to allow editing/fixing of wrong params
+
         else:
             raise Exception('Unknown job status id {}'.format(self.job_status))
         #TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
-        #TODO: handle FAILED PROCESS CASES (check if stderr is not empty or sth liek this. or output dir does not exist,...) (DONE)
-        #TODO IN case of a failed job. the .tmp-VIDID should still exist.
-        #TODO add job cleanup button to kill remaining .tmp-folders
-        #TODO: add function to: find "self" in parent tab widget, then change name/icon of "self"'s index in parent tab widget.
-
-        #TODO: Add Job Status UI element and overview element (text, maybe even an Icon).
-        print('leaving UI update')
-
-
-
+        #TODO add job cleanup button to kill remaining .tmp-folders.
 
 
     def get_args(self, copy=True):
@@ -373,7 +387,9 @@ class JobPanel(QWidget):
             self.job_status = JobPanel.STATUS_FINISHED
             self.update_user_interface()
         except Exception as e:
-            self.job_status = JobPanel.STATUS_FAILED
+            # has the job been stopped manually, or has it crashed?
+            if not self.job_status == JobPanel.STATUS_STOPPED:
+                self.job_status = JobPanel.STATUS_FAILED
             print(e)
 
 
@@ -411,7 +427,6 @@ class JobPanel(QWidget):
         """
         Try to stop this JobPanel's job according to parameterization
         """
-
         self.job_status = JobPanel.STATUS_STOPPED
 
         for p in self.child_processes:
