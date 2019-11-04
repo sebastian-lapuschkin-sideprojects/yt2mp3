@@ -182,20 +182,28 @@ class JobPanel(QWidget):
         """
         return self.job_status in [JobPanel.STATUS_RUNNING, JobPanel.STATUS_SUBMITTED]
 
+    def enable_these_elements(self, *args):
+        for a in args:
+            a.setEnabled(True)
+
+    def disable_these_elements(self, *args):
+        for a in args:
+            a.setEnabled(False)
+
     def update_user_interface(self):
         """
         Enables/disables UI elements wrt process status and/or enterd data.
         """
         if self.job_status == JobPanel.STATUS_IDLE:
             self.job_status_label.setText('Status: Idle')
-            self.video_id_url_input.setEnabled(True)
-            self.output_location_input.setEnabled(True)
-            self.stop_job_button.setEnabled(False)
-            self.output_window.setEnabled(False)
+            self.enable_these_elements(self.video_id_url_input,
+                                       self.output_location_input)
+            self.disable_these_elements(self.stop_job_button,
+                                        self.output_window)
             if self.is_runnable():
-                self.run_job_button.setEnabled(True)
+                self.enable_these_elements(self.run_job_button)
             else:
-                self.run_job_button.setEnabled(False)
+                self.disable_these_elements(self.run_job_button)
 
         # TODO: CONTINUE HERE ONCE STABLE INTERNET IS OBTAINABLE FOR TESTING
         elif self.job_status == JobPanel.STATUS_SUBMITTED:
@@ -208,7 +216,10 @@ class JobPanel(QWidget):
             pass
         elif self.job_status == JobPanel.STATUS_RUNNING:
             self.job_status_label.setText('Status: Running')
+            print(self.job_status)
+            print('running')
             pass
+
         elif self.job_status == JobPanel.STATUS_FINISHED:
             self.job_status_label.setText('Status: Finished')
             # TODO: gui stuff:
@@ -219,12 +230,14 @@ class JobPanel(QWidget):
             pass
         elif self.job_status == JobPanel.STATUS_STOPPED:
             self.job_status_label.setText('Status: Stopped')
+            print('stopped')
             # TODO: disable output window
             # TODO: unlock input fields and buttons.
             # TODO: avoid execution of follow-up jobs
             pass
         elif self.job_status == JobPanel.STATUS_FAILED:
             self.job_status_label.setText('Status: Failed')
+            print('failed')
         else:
             raise Exception('Unknown job status id {}'.format(self.job_status))
         #TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
@@ -234,6 +247,7 @@ class JobPanel(QWidget):
         #TODO: add function to: find "self" in parent tab widget, then change name/icon of "self"'s index in parent tab widget.
 
         #TODO: Add Job Status UI element and overview element (text, maybe even an Icon).
+        print('leaving UI update')
 
 
 
@@ -349,14 +363,15 @@ class JobPanel(QWidget):
         if self.thread_level_job_stop_check(): return
 
         self.job_status = JobPanel.STATUS_RUNNING
-        self.worker_thread = current_thread()
         self.update_user_interface()
+        self.worker_thread = current_thread()
 
         try:
-            print(self.argparse_namespace)
+            print(self.argparse_namespace) # TODO: removes
             yt2mp3_utils.check_requirements()
             yt2mp3.download_convert_split(self.argparse_namespace, self)
             self.job_status = JobPanel.STATUS_FINISHED
+            self.update_user_interface()
         except Exception as e:
             self.job_status = JobPanel.STATUS_FAILED
             print(e)
@@ -377,12 +392,13 @@ class JobPanel(QWidget):
         """
         Try to run this JobPanel's job according to parameterization
         """
-        self.worker_thread_pool.submit(self.run_job_function)
         self.job_status = JobPanel.STATUS_SUBMITTED
+        self.update_user_interface()
+        self.worker_thread_pool.submit(self.run_job_function)
         # self.communicator_thread_pool.submit(self.update_process_output)
 
         # update UI elements
-        self.update_user_interface()
+
 
     def thread_level_job_stop_check(self):
         if self.job_status == JobPanel.STATUS_STOPPED:
