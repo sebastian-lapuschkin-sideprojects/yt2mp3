@@ -143,7 +143,7 @@ class MainWindow(QWidget):
         self.stop_all_jobs_button.clicked.connect(self.stop_all_jobs)
 
         self.process_output_monitor.update_output.connect(self.handle_process_output)
-        self.process_output_monitor.update_tabnames.connect(self.handle_output_path_change)
+        self.process_output_monitor.update_tabinfo.connect(self.handle_tabinfo_change)
         self.process_output_monitor.update_stati.connect(self.handle_process_status_summary)
         self.process_output_monitor.monitor_outputs()
 
@@ -157,10 +157,14 @@ class MainWindow(QWidget):
         job_panel.output_window.moveCursor(QtGui.QTextCursor.End)
 
 
-    @pyqtSlot(int, str)
-    def handle_output_path_change(self, i, name):
-        #TODO IMPLEMENT SOMETHING REASONABLE. DO NOT UPDATE ALL THE TIME.
-        self.tab_panel.setTabText(i, name)
+    @pyqtSlot(dict)
+    def handle_tabinfo_change(self, tabinfodict):
+        #tabinfodict: {tabindex:(jobstatus,tabname)}
+        #NOTE: ignoring the iconos/status for now.
+        for idx, vals in tabinfodict.items():
+            current_status, current_tabname = vals
+            if not self.tab_panel.tabText(idx) == current_tabname:
+                self.tab_panel.setTabText(idx, current_tabname)
 
 
     @pyqtSlot(dict)

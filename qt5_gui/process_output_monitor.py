@@ -13,8 +13,8 @@ class ProcessOutputMonitor(QObject):
     A Monitor for handling subprocess communication
     """
     update_output = pyqtSignal(JobPanel, str)   # the text output signals
-    update_stati = pyqtSignal(dict)             # process status signals
-    update_tabnames = pyqtSignal(int, str)      # process tab names
+    update_stati = pyqtSignal(dict)
+    update_tabinfo = pyqtSignal(dict)      # process tab names
 
     def __init__(self, tab_panel):
         super(QObject, self).__init__()
@@ -35,22 +35,24 @@ class ProcessOutputMonitor(QObject):
         print('MONITOR RUNNING!')
         # DUMMY FUNCTIONALITY. REPLACE WITH READING FROM jobPanel child process pipes
         while not self.stopped:
-            job_stati = {   JobPanel.STATUS_IDLE:0,
+            job_status_summary = {   JobPanel.STATUS_IDLE:0,
                             JobPanel.STATUS_SUBMITTED:0,
                             JobPanel.STATUS_RUNNING:0,
                             JobPanel.STATUS_STOPPED:0,
                             JobPanel.STATUS_FINISHED:0
                         }
+            tab_information = {} #job status and tab name
             for i in range(len(self.tabs)):
                 try:
                     job_panel = self.tabs.widget(i)
-                    job_stati[job_panel.job_status] += 1
-                    #self.update_tabnames.emit(i, os.path.basename(job_panel.output_location_input.text())) # This is too wasteful and not ok.
+                    job_status_summary[job_panel.job_status] += 1
+                    tab_information[i] = (job_panel.job_status, os.path.basename(job_panel.output_location_input.text()))
                     msg = job_panel.get_process_output(timeout=0.1) #NO TIMEOUT NEEDED. NOTE .
                     if msg:
                         self.update_output.emit(job_panel, msg)
                 except Exception as e:
                     print(e)
-            self.update_stati.emit(job_stati)
-            time.sleep(0.01)
+            self.update_stati.emit(job_status_summary)
+            self.update_tabinfo.emit(tab_information)
+            time.sleep(1/20)
         print('MONITOR STOPPED!')
