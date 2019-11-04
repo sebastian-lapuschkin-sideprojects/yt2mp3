@@ -167,10 +167,11 @@ class JobPanel(QWidget):
         """
         Are all required arguments present to run the job?
         """
+
         if self.job_status in [JobPanel.STATUS_SUBMITTED, JobPanel.STATUS_RUNNING]:
             # currently submitted stuff can not be re-submitted
             return False
-        elif not (self.argparse_namespace.video and self.argparse_namespace.output):
+        elif not ((self.argparse_namespace.video and len(self.argparse_namespace.video[0]) > 0) and self.argparse_namespace.output):
             # can not run incomplete input sets
             return False
         elif self.segment_output_checkbox.isChecked() and not (self.argparse_namespace.segment_name and self.argparse_namespace.segment_length and self.argparse_namespace.segment_length > 0):
