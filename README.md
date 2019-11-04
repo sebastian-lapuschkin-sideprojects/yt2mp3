@@ -4,7 +4,7 @@ You are not keen (or too paranoid) to use any of the (often) sketchy online conv
 
 Then you probably want to check out this convenient project providing simple youtube-to-mp3-conversion capabilities using [`ffmpeg`](https://github.com/FFmpeg/FFmpeg) and [`youtube-dl`](https://github.com/ytdl-org/youtube-dl) in a simple purposeful GUI (TODO).
 
-Please note that this is in no way a professional or professionally maintained repository and mainly exists for my own benefit and amusement.
+Please note that this is in no way a professional or professionally maintained repository and mainly exists for my own benefit, learning experience and amusement.
 
 ---
 ## Requirements:
@@ -16,15 +16,14 @@ Please note that this is in no way a professional or professionally maintained r
 
 ---
 ## Agenda:
-add GUI, make portable as stand alone app
+make portable as stand alone app,
+fix output stream rerouting (blocking, thread prints)
 
-Rough draft of how the gui could look like:
-
-![gui draft](doc/rough_draft.png)
+![current user interface](doc/ui.png)
 
 ---
 ## How to use:
-For now, the tool can be used from terminal:
+The tool can be used from terminal, or as a graphical user interface:
 ```
 usage: yt2mp3.py [-h] [-sl SEGMENT_LENGTH] [-sn SEGMENT_NAME] [-o OUTPUT] [-n]
                  [video [video ...]]
