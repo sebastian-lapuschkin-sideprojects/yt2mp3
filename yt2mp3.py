@@ -58,7 +58,7 @@ def download_convert_split(args_namespace, process_watcher=None):
         print('[yt2mp3] SUCCESS! OUTPUTS CAN BE FOUND AT {}'.format(output_destination))
     except Exception as e:
         print('[yt2mp3] Bollocks! Process did not finish!')
-        print(e)
+        raise e
 
     finally:
         # clean up

@@ -26,6 +26,7 @@ from PyQt5.QtGui import QIcon                # pylint: disable=F0401
 from PyQt5.QtGui import QTextCursor          # pylint: disable=F0401
 from PyQt5.QtCore import pyqtSlot            # pylint: disable=F0401
 from PyQt5.QtCore import QObject             # pylint: disable=F0401
+from PyQt5.QtCore import QSize               # pylint: disable=F0401
 from PyQt5.QtCore import pyqtSignal
 
 from concurrent.futures import ThreadPoolExecutor
@@ -93,6 +94,8 @@ class MainWindow(QWidget):
         self.n_jobs_finished_number_label = QLabel('?')
         self.n_jobs_stopped_label = QLabel('Stopped:')
         self.n_jobs_stopped_number_label = QLabel('?')
+        self.n_jobs_failed_label = QLabel('Failed:')
+        self.n_jobs_failed_number_label = QLabel('?')
 
         self.job_status_layout.addWidget(self.n_jobs_idle_label, 0, 0)
         self.job_status_layout.addWidget(self.n_jobs_idle_number_label, 0, 1)
@@ -102,8 +105,10 @@ class MainWindow(QWidget):
         self.job_status_layout.addWidget(self.n_jobs_running_number_label, 2, 1)
         self.job_status_layout.addWidget(self.n_jobs_stopped_label, 3, 0)
         self.job_status_layout.addWidget(self.n_jobs_stopped_number_label, 3, 1)
-        self.job_status_layout.addWidget(self.n_jobs_finished_label, 4, 0)
-        self.job_status_layout.addWidget(self.n_jobs_finished_number_label, 4, 1)
+        self.job_status_layout.addWidget(self.n_jobs_failed_label, 4, 0)
+        self.job_status_layout.addWidget(self.n_jobs_failed_number_label, 4, 1)
+        self.job_status_layout.addWidget(self.n_jobs_finished_label, 5, 0)
+        self.job_status_layout.addWidget(self.n_jobs_finished_number_label, 5, 1)
 
 
         self.button_panel = QWidget()                       # widget and layout to group buttons
@@ -117,9 +122,22 @@ class MainWindow(QWidget):
         button_layout.addWidget(self.stop_all_jobs_button)
         self.button_panel.setLayout(button_layout)
 
+
         # second, a tab panel for job specification to the left
+        # list of icons for the tabs to use.
+        self.tab_icons = {  JobPanel.STATUS_IDLE:QIcon('resources/edit.png'),
+                            JobPanel.STATUS_SUBMITTED:QIcon('resources/stopwatch.png'),
+                            JobPanel.STATUS_RUNNING:QIcon('resources/download.png'),
+                            JobPanel.STATUS_STOPPED:QIcon('resources/stop.png'),
+                            JobPanel.STATUS_FINISHED:QIcon('resources/finish-flag.png'),
+                            JobPanel.STATUS_FAILED:QIcon('resources/alarm.png')
+                            }
+
+        self.tab_status = {} # keep track of this tab's job's status
+        self.tab_icon_size = QSize(24, 24)
         self.tab_panel = QTabWidget()
         self.tab_panel.setTabsClosable(True)                # make tabs closable.
+        self.tab_panel.setIconSize(self.tab_icon_size)
         self.tabs_created = 0                               # count how many tabs have been created
 
         # assemble gui elements
@@ -165,6 +183,11 @@ class MainWindow(QWidget):
             current_status, current_tabname = vals
             if not self.tab_panel.tabText(idx) == current_tabname:
                 self.tab_panel.setTabText(idx, current_tabname)
+            if idx not in self.tab_status or not self.tab_status[idx] == current_status:
+                self.tab_status[idx] = current_status
+                self.tab_panel.setTabIcon(idx, self.tab_icons[current_status])
+
+
 
 
     @pyqtSlot(dict)
@@ -177,6 +200,7 @@ class MainWindow(QWidget):
             self.n_jobs_running_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_RUNNING]))
             self.n_jobs_finished_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_FINISHED]))
             self.n_jobs_stopped_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_STOPPED]))
+            self.n_jobs_failed_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_FAILED]))
             # remember current values
             self.previous_job_stati = status_dict
 
@@ -191,7 +215,7 @@ class MainWindow(QWidget):
         else:
             argparse_namespace = yt2mp3.parse_command_line_args()
 
-        new_tab_name = 'Job {}'.format(self.tabs_created)
+        new_tab_name = 'Job {}'.format(self.tabs_created) # NOTE: this name acutally never is used right now.
         new_tab = JobPanel(self.worker_thread_pool, self.gui_communicator_thread_pool, argparse_namespace)
 
         self.tab_panel.addTab(new_tab, new_tab_name)

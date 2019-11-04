@@ -39,7 +39,8 @@ class ProcessOutputMonitor(QObject):
                             JobPanel.STATUS_SUBMITTED:0,
                             JobPanel.STATUS_RUNNING:0,
                             JobPanel.STATUS_STOPPED:0,
-                            JobPanel.STATUS_FINISHED:0
+                            JobPanel.STATUS_FINISHED:0,
+                            JobPanel.STATUS_FAILED:0
                         }
             tab_information = {} #job status and tab name
             for i in range(len(self.tabs)):

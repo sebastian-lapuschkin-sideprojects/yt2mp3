@@ -36,6 +36,7 @@ class JobPanel(QWidget):
     STATUS_RUNNING = 2
     STATUS_FINISHED = 3
     STATUS_STOPPED = 4
+    STATUS_FAILED = 5
 
     def __init__(self, worker_thread_pool, gui_communicator_thread_pool, argparse_namespace):
         """
@@ -185,7 +186,6 @@ class JobPanel(QWidget):
         """
         Enables/disables UI elements wrt process status and/or enterd data.
         """
-        #TODO USE ICONS IN TABS: MAKE TABS LONGER. SET TAB NAME FROM OUTPUT COLCATION NAME
         if self.job_status == JobPanel.STATUS_IDLE:
             self.job_status_label.setText('Status: Idle')
             self.video_id_url_input.setEnabled(True)
@@ -223,10 +223,12 @@ class JobPanel(QWidget):
             # TODO: unlock input fields and buttons.
             # TODO: avoid execution of follow-up jobs
             pass
+        elif self.job_status == JobPanel.STATUS_FAILED:
+            self.job_status_label.setText('Status: Failed')
         else:
             raise Exception('Unknown job status id {}'.format(self.job_status))
         #TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
-        #TODO: handle FAILED PROCESS CASES (check if stderr is not empty or sth liek this. or output dir does not exist,...)
+        #TODO: handle FAILED PROCESS CASES (check if stderr is not empty or sth liek this. or output dir does not exist,...) (DONE)
         #TODO IN case of a failed job. the .tmp-VIDID should still exist.
         #TODO add job cleanup button to kill remaining .tmp-folders
         #TODO: add function to: find "self" in parent tab widget, then change name/icon of "self"'s index in parent tab widget.
@@ -354,10 +356,12 @@ class JobPanel(QWidget):
             print(self.argparse_namespace)
             yt2mp3_utils.check_requirements()
             yt2mp3.download_convert_split(self.argparse_namespace, self)
+            self.job_status = JobPanel.STATUS_FINISHED
         except Exception as e:
+            self.job_status = JobPanel.STATUS_FAILED
             print(e)
 
-        self.job_status = JobPanel.STATUS_FINISHED
+
         # update UI elements
         self.update_user_interface()
 
