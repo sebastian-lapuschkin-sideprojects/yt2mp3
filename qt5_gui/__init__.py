@@ -65,7 +65,7 @@ class MainWindow(QWidget):
         # set up threading work backend, leaving at least one cpu for the OS and other crap
         ###################################################################################
         self.worker_thread_pool = ThreadPoolExecutor(max_workers=max(1, os.cpu_count()-1))
-        self.gui_communicator_thread_pool = ThreadPoolExecutor(max_workers=max(1, os.cpu_count()-1)) # TODO: REMOVE
+        self.gui_communicator_thread_pool = ThreadPoolExecutor(max_workers=max(1, os.cpu_count()-1))
 
 
         ###############################
@@ -82,7 +82,6 @@ class MainWindow(QWidget):
         self.status_widget = QWidget()
         self.job_status_layout = QGridLayout()
         self.status_widget.setLayout(self.job_status_layout)
-
 
         self.n_jobs_idle_label = QLabel('Idle:')
         self.n_jobs_idle_number_label = QLabel('?')
@@ -180,11 +179,12 @@ class MainWindow(QWidget):
         #tabinfodict: {tabindex:(jobstatus,tabname)}
         #NOTE: ignoring the iconos/status for now.
         for idx, vals in tabinfodict.items():
+            tab = self.tab_panel.widget(idx)
             current_status, current_tabname = vals
             if not self.tab_panel.tabText(idx) == current_tabname:
                 self.tab_panel.setTabText(idx, current_tabname)
-            if idx not in self.tab_status or not self.tab_status[idx] == current_status:
-                self.tab_status[idx] = current_status
+            if idx not in self.tab_status or not self.tab_status[tab] == current_status:
+                self.tab_status[tab] = current_status
                 self.tab_panel.setTabIcon(idx, self.tab_icons[current_status])
 
 
@@ -230,6 +230,7 @@ class MainWindow(QWidget):
         """
         # TODO: figure out what to do. what if job is running? just blindly kill thread?
         self.tab_panel.widget(index).stop_job_callback_fxn()
+        self.tab_status.pop(self.tab_panel.widget(index), None)
         self.tab_panel.removeTab(index)
 
     def run_all_jobs(self):
