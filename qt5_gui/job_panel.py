@@ -385,14 +385,14 @@ class JobPanel(QWidget):
             print(self.argparse_namespace) # TODO: removes
             yt2mp3_utils.check_requirements()
             yt2mp3.download_convert_split(self.argparse_namespace, self)
-            self.job_status = JobPanel.STATUS_FINISHED
-            self.update_user_interface()
+            if not self.job_status == JobPanel.STATUS_STOPPED:
+                self.job_status = JobPanel.STATUS_FINISHED
+
         except Exception as e:
             # has the job been stopped manually, or has it crashed?
             if not self.job_status == JobPanel.STATUS_STOPPED:
                 self.job_status = JobPanel.STATUS_FAILED
-            print(e)
-
+                print(e)
 
         # update UI elements
         self.update_user_interface()
