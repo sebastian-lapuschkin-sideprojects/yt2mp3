@@ -80,6 +80,8 @@ def parse_command_line_args(argument_list=None):
     # define and collect command line arguents (in command line mode.)
     # TODO: add keep-video option
     # TODO: add keep archive-file option
+    # TODO: infer default output outside of .tmp folder
+    # TODO: extend cleanup routine to catch orphaned .tmp folders in failure cases
     argument_parser = argparse.ArgumentParser(description='Convert videos from Youtube to mp3 files!')
     argument_parser.add_argument('video', type=str, nargs='*',
                                  help='The URL or ID of the video to download and convert')
