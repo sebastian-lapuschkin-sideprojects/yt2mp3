@@ -183,7 +183,7 @@ class MainWindow(QWidget):
             current_status, current_tabname = vals
             if not self.tab_panel.tabText(idx) == current_tabname:
                 self.tab_panel.setTabText(idx, current_tabname)
-            if idx not in self.tab_status or not self.tab_status[tab] == current_status:
+            if tab not in self.tab_status or not self.tab_status[tab] is current_status:
                 self.tab_status[tab] = current_status
                 self.tab_panel.setTabIcon(idx, self.tab_icons[current_status])
 
