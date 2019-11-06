@@ -1,11 +1,9 @@
 # collects all utility functions
 
 import subprocess
-import datetime
 import os
 import glob
 import shutil
-import pty
 
 
 def video_id(video_id_or_url):
@@ -26,6 +24,7 @@ def video_id(video_id_or_url):
     else:
         # assume we already have an video id
         return video_id_or_url
+
 
 def video_url(video_id_or_url):
     """
@@ -73,7 +72,8 @@ def download_video(video_url, process_watcher=None):
     -----------
     video_url: str - The youtube video url or id
 
-    process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
+    process_watcher: object - (optional) some object instance containing a field child_processes
+        of type list expecting a registration of child processes.
         This is hacky, but currently the only solution I am aware of.
 
     Returns:
@@ -81,18 +81,18 @@ def download_video(video_url, process_watcher=None):
     Path to the file containing the IDs of the downloaded/created files
     Path to the downloaded mp3 file
     """
-    download_dir = '.tmp-{}'.format(video_id(video_url)) #, datetime.datetime.now())
+    download_dir = '.tmp-{}'.format(video_id(video_url))
     archive_file = '{}/downloaded.txt'.format(download_dir)
     ensure_dir_exists(download_dir)
     # youtube-dl also provides a command line interface which is more
     # rich and clear than its python API
     cmd = ['youtube-dl',
-            '--ignore-errors',
-            '--format', 'bestaudio',
-            '--download-archive', archive_file,
-            '--output', '{}/%(title)s-%(id)s.%(ext)s'.format(download_dir),
-            video_url
-            ]
+           '--ignore-errors',
+           '--format', 'bestaudio',
+           '--download-archive', archive_file,
+           '--output', '{}/%(title)s-%(id)s.%(ext)s'.format(download_dir),
+           video_url
+           ]
     if process_watcher:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         process_watcher.child_processes.append(proc)
@@ -114,7 +114,8 @@ def video_to_mp3(download_dir, archive_file, process_watcher=None):
 
     archive_file: str - the path to the during the download created archive file holding the video id
 
-    process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
+    process_watcher: object - (optional) some object instance containing a field child_processes of
+        type list expecting a registration of child processes.
         This is hacky, but currently the only solution I am aware of.
 
     Returns:
@@ -126,7 +127,7 @@ def video_to_mp3(download_dir, archive_file, process_watcher=None):
     assert os.path.isdir(download_dir), "Download directory {} missing!".format(download_dir)
     assert os.path.isfile(archive_file), "Archive file {} missing! Did the download fail?".format(archive_file)
     video_id = None
-    with open(archive_file,'rt') as f:
+    with open(archive_file, 'rt') as f:
         video_id = f.read().split(' ')[1].strip()
     pattern = '{}/*{}.*'.format(download_dir, video_id)
     downloaded_file_name = glob.glob(pattern)[0]
@@ -153,8 +154,6 @@ def video_to_mp3(download_dir, archive_file, process_watcher=None):
     assert os.path.isfile(mp3_file_name), 'Conversion from Video to MP3 file failed! (post-rename)'
     print('[yt2mp3] MP3 output saved to {}'.format(mp3_file_name))
     return mp3_file_name, downloaded_file_name, tmp_mp3_file_name
-
-
 
 
 def ensure_dir_exists(path_to_dir):
@@ -241,7 +240,8 @@ def split_download_into_segments(downloaded_file_name, output_destination, segme
 
     segment_naming_pattern: str - the naming pattern after which the generated segments are to be called.
 
-    process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
+    process_watcher: object - (optional) some object instance containing a field child_processes of
+        type list expecting a registration of child processes.
         This is hacky, but currently the only solution I am aware of.
     """
 
@@ -311,4 +311,3 @@ def cleanup(download_dir, archive_file, video_file, tmp_mp3_file_name):
         else:
             print('[yt2mp3] Removing empty output directory "{}"'.format(download_dir))
             os.rmdir(download_dir)
-
