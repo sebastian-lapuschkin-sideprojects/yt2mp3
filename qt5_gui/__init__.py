@@ -24,9 +24,11 @@ from .process_output_monitor import ProcessOutputMonitor
 # planned use:
 # import <this_module>
 # <this_module>.run()
+
+
 def run():
     app = QApplication(sys.argv)
-    ex = MainWindow()
+    MainWindow()
     sys.exit(app.exec_())
 
 
@@ -48,18 +50,17 @@ class MainWindow(QWidget):
         self.worker_thread_pool = ThreadPoolExecutor(max_workers=max(1, os.cpu_count()-1))
         self.gui_communicator_thread_pool = ThreadPoolExecutor(max_workers=max(1, os.cpu_count()-1))
 
-
         ###############################
         # set up layout of main window
         ###############################
 
         # first, some buttons to the right
-        self.add_tab_button = QPushButton('+ Tab')          # button for adding new tabs (see below)
-        self.run_all_jobs_button = QPushButton('Run all')   # button to run all runnable (not yet running and un-run) jobs
-        self.stop_all_jobs_button = QPushButton('Stop all') # button to terminate all running jobs
+        self.add_tab_button = QPushButton('+ Tab')           # button for adding new tabs (see below)
+        self.run_all_jobs_button = QPushButton('Run all')    # button to run all runnable (not yet running and un-run) jobs
+        self.stop_all_jobs_button = QPushButton('Stop all')  # button to terminate all running jobs
 
-        #labels for summarizing job stati
-        self.previous_job_stati = None # memorize the previously received status to avoid uneccessary rendering.
+        # labels for summarizing job stati
+        self.previous_job_stati = None  # memorize the previously received status to avoid uneccessary rendering.
         self.status_widget = QWidget()
         self.job_status_layout = QGridLayout()
         self.status_widget.setLayout(self.job_status_layout)
@@ -90,7 +91,6 @@ class MainWindow(QWidget):
         self.job_status_layout.addWidget(self.n_jobs_finished_label, 5, 0)
         self.job_status_layout.addWidget(self.n_jobs_finished_number_label, 5, 1)
 
-
         self.button_panel = QWidget()                       # widget and layout to group buttons
         button_layout = QVBoxLayout(self)
 
@@ -102,18 +102,17 @@ class MainWindow(QWidget):
         button_layout.addWidget(self.stop_all_jobs_button)
         self.button_panel.setLayout(button_layout)
 
-
         # second, a tab panel for job specification to the left
         # list of icons for the tabs to use.
-        self.tab_icons = {  JobPanel.STATUS_IDLE:QIcon('resources/edit.png'),
-                            JobPanel.STATUS_SUBMITTED:QIcon('resources/stopwatch.png'),
-                            JobPanel.STATUS_RUNNING:QIcon('resources/download.png'),
-                            JobPanel.STATUS_STOPPED:QIcon('resources/stop.png'),
-                            JobPanel.STATUS_FINISHED:QIcon('resources/finish-flag.png'),
-                            JobPanel.STATUS_FAILED:QIcon('resources/alarm.png')
-                            }
+        self.tab_icons = {JobPanel.STATUS_IDLE: QIcon('resources/edit.png'),
+                          JobPanel.STATUS_SUBMITTED: QIcon('resources/stopwatch.png'),
+                          JobPanel.STATUS_RUNNING: QIcon('resources/download.png'),
+                          JobPanel.STATUS_STOPPED: QIcon('resources/stop.png'),
+                          JobPanel.STATUS_FINISHED: QIcon('resources/finish-flag.png'),
+                          JobPanel.STATUS_FAILED: QIcon('resources/alarm.png')
+                          }
 
-        self.tab_status = {} # keep track of this tab's job's status
+        self.tab_status = {}                                # keep track of each tab's job's status
         self.tab_icon_size = QSize(24, 24)
         self.tab_panel = QTabWidget()
         self.tab_panel.setTabsClosable(True)                # make tabs closable.
@@ -147,18 +146,14 @@ class MainWindow(QWidget):
 
         self.show()
 
-
-
     @pyqtSlot(JobPanel, str)
     def handle_process_output(self, job_panel, msg):
         job_panel.output_window.insertPlainText(msg)
         job_panel.output_window.moveCursor(QtGui.QTextCursor.End)
 
-
     @pyqtSlot(dict)
     def handle_tabinfo_change(self, tabinfodict):
-        #tabinfodict: {tabindex:(jobstatus,tabname)}
-        #NOTE: ignoring the iconos/status for now.
+        # tabinfodict: {tabindex:(jobstatus,tabname)}
         for idx, vals in tabinfodict.items():
             tab = self.tab_panel.widget(idx)
             current_status, current_tabname = vals
@@ -168,12 +163,8 @@ class MainWindow(QWidget):
                 self.tab_status[tab] = current_status
                 self.tab_panel.setTabIcon(idx, self.tab_icons[current_status])
 
-
-
-
     @pyqtSlot(dict)
     def handle_process_status_summary(self, status_dict):
-        #TODO: redesign and use a grid layout for that. keep one label fixed, modify numerical label only.
         if not status_dict == self.previous_job_stati:
             # if we receive a real update, render status text.
             self.n_jobs_idle_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_IDLE]))
@@ -185,7 +176,6 @@ class MainWindow(QWidget):
             # remember current values
             self.previous_job_stati = status_dict
 
-
     def add_tab(self):
         """
         Adds a new tab to the JobTabPanel
@@ -196,14 +186,13 @@ class MainWindow(QWidget):
         else:
             argparse_namespace = yt2mp3.parse_command_line_args()
 
-        new_tab_name = 'Job {}'.format(self.tabs_created) # NOTE: this name acutally never is used right now.
+        new_tab_name = 'New Job {}'.format(self.tabs_created)  # NOTE: this name actually never is used right now.
         new_tab = JobPanel(self.worker_thread_pool, self.gui_communicator_thread_pool, argparse_namespace)
 
         self.tab_panel.addTab(new_tab, new_tab_name)
         self.tabs_created += 1
 
         self.tab_panel.setCurrentIndex(active_tab_index+1)
-        # NOTE: tab widgets and their proparties can only be accessed and changed by index. this may render dynamically changing tab text difficult
 
     def close_tab(self, index):
         """
@@ -235,8 +224,3 @@ class MainWindow(QWidget):
         self.worker_thread_pool.shutdown(wait=False)
         self.process_output_monitor.stop()
         event.accept()
-
-
-
-
-

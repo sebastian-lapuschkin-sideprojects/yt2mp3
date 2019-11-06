@@ -1,28 +1,18 @@
-from PyQt5.QtWidgets import QMainWindow      # pylint: disable=F0401
-from PyQt5.QtWidgets import QApplication     # pylint: disable=F0401
 from PyQt5.QtWidgets import QPushButton      # pylint: disable=F0401
 from PyQt5.QtWidgets import QWidget          # pylint: disable=F0401
-from PyQt5.QtWidgets import QAction          # pylint: disable=F0401
-from PyQt5.QtWidgets import QTabWidget       # pylint: disable=F0401
-from PyQt5.QtWidgets import QVBoxLayout      # pylint: disable=F0401
-from PyQt5.QtWidgets import QHBoxLayout      # pylint: disable=F0401
 from PyQt5.QtWidgets import QGridLayout      # pylint: disable=F0401
 from PyQt5.QtWidgets import QLabel           # pylint: disable=F0401
 from PyQt5.QtWidgets import QLineEdit        # pylint: disable=F0401
 from PyQt5.QtWidgets import QCheckBox        # pylint: disable=F0401
 from PyQt5.QtWidgets import QFileDialog      # pylint: disable=F0401
 from PyQt5.QtWidgets import QPlainTextEdit   # pylint: disable=F0401
-from PyQt5 import QtGui                      # pylint: disable=F0401
-from PyQt5.QtWidgets import QAbstractItemView    # pylint: disable=F0401
-from PyQt5.QtGui import QIcon                # pylint: disable=F0401
+
+from threading import current_thread
+import argparse
 
 import yt2mp3
 import yt2mp3_utils
 
-from threading import current_thread
-from threading import Thread
-import argparse
-import os
 
 class JobPanel(QWidget):
     """
@@ -30,7 +20,7 @@ class JobPanel(QWidget):
     a download+conversion job
     """
 
-    #JOB STATI
+    # JOB STATI
     STATUS_IDLE = 0
     STATUS_SUBMITTED = 1
     STATUS_RUNNING = 2
@@ -65,7 +55,6 @@ class JobPanel(QWidget):
         self.containing_tab = None
         self.job_status = JobPanel.STATUS_IDLE
 
-
         ################################
         # set up tab elements and layout
         ################################
@@ -87,13 +76,13 @@ class JobPanel(QWidget):
 
         self.segment_output_label = QLabel('Split output into segments')
         self.segment_output_checkbox = QCheckBox()
-        self.segment_output_checkbox.setChecked(self.argparse_namespace.segment_length is not None )
+        self.segment_output_checkbox.setChecked(self.argparse_namespace.segment_length is not None)
 
         self.output_segment_duration_label = QLabel('Output segment duration')
         self.output_segment_duration_input = QLineEdit()
         self.output_segment_duration_input.setEnabled(self.segment_output_checkbox.isChecked())
         self.output_segment_duration_label.setEnabled(self.segment_output_checkbox.isChecked())
-        self.output_segment_duration_input.setText(str(self.argparse_namespace.segment_length).replace('None',''))
+        self.output_segment_duration_input.setText(str(self.argparse_namespace.segment_length).replace('None', ''))
 
         self.output_segment_name_pattern_label = QLabel('Segment name pattern')
         self.output_segment_name_pattern_input = QLineEdit()
@@ -102,8 +91,8 @@ class JobPanel(QWidget):
         self.output_segment_name_pattern_input.setText(self.argparse_namespace.segment_name)
 
         self.output_window_label = QLabel('Process output')
-        self.output_window = QPlainTextEdit()  # TODO: subclass this, reroute stdout. or remove https://stackoverflow.com/questions/14161100/which-qt-widget-should-i-use-for-message-display
-        self.output_window.setEnabled(True) # start with "false"
+        self.output_window = QPlainTextEdit()
+        self.output_window.setEnabled(True)
         self.output_window.setReadOnly(True)
 
         self.run_job_button = QPushButton('Run')
@@ -122,7 +111,7 @@ class JobPanel(QWidget):
         layout.addWidget(self.output_location_input, 1, 1)
         layout.addWidget(self.output_location_dialog_button, 1, 2)
 
-        layout.setRowStretch(2,1)  # allows the construction of "empty lines"
+        layout.setRowStretch(2, 1)  # allows the construction of "empty lines"
 
         layout.addWidget(self.segment_output_label, 3, 0)
         layout.addWidget(self.segment_output_checkbox, 3, 1)
@@ -136,7 +125,7 @@ class JobPanel(QWidget):
         layout.addWidget(self.run_job_button, 4, 2)
         layout.addWidget(self.stop_job_button, 5, 2)
 
-        layout.setRowStretch(6,1)
+        layout.setRowStretch(6, 1)
 
         layout.addWidget(self.output_window_label, 7, 0)
         layout.addWidget(self.job_status_label, 7, 2)
@@ -174,7 +163,12 @@ class JobPanel(QWidget):
         elif not ((self.argparse_namespace.video and len(self.argparse_namespace.video[0]) > 0) and self.argparse_namespace.output):
             # can not run incomplete input sets
             return False
-        elif self.segment_output_checkbox.isChecked() and not (self.argparse_namespace.segment_name and self.argparse_namespace.segment_length and self.argparse_namespace.segment_length > 0):
+        elif (self.segment_output_checkbox.isChecked() and
+              not (self.argparse_namespace.segment_name and
+                   self.argparse_namespace.segment_length and
+                   self.argparse_namespace.segment_length > 0
+                   )
+              ):
             # can not run incomplete optional input sets
             return False
         elif self.job_status in [JobPanel.STATUS_FINISHED]:
@@ -220,8 +214,8 @@ class JobPanel(QWidget):
         """
         enable/disable gui elements corresponding to an active state of the job
         """
-        self.enable_these_elements( self.output_window,
-                                    self.stop_job_button)
+        self.enable_these_elements(self.output_window,
+                                   self.stop_job_button)
         self.disable_these_elements(self.run_job_button,
                                     self.video_id_url_input,
                                     self.output_location_input,
@@ -229,7 +223,6 @@ class JobPanel(QWidget):
                                     self.segment_output_checkbox,
                                     self.output_segment_duration_input,
                                     self.output_segment_name_pattern_input)
-
 
     def update_user_interface(self):
         """
@@ -264,9 +257,8 @@ class JobPanel(QWidget):
 
         else:
             raise Exception('Unknown job status id {}'.format(self.job_status))
-        #TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
-        #TODO add job cleanup button to kill remaining .tmp-folders.
-
+        # TODO Capture REGULAR printline outputs! (reroute to process_watcher.pipes?)
+        # TODO add job cleanup button to kill remaining .tmp-folders.
 
     def get_args(self, copy=True):
         """
@@ -319,7 +311,7 @@ class JobPanel(QWidget):
         To specify a file name, add it manually, until a suitable solution has been found.
         """
 
-        # TODO: Use a file selectinon dialog which is able to select both files or folders! any found examples so far failed!
+        # TODO: Use a file selection dialog which is able to select both files or folders! any found examples so far failed!
         # TODO: Improve user experience in general
         dialog = QFileDialog(self, 'Pick output directory')
         dialog.setFileMode(QFileDialog.Directory)
@@ -342,8 +334,6 @@ class JobPanel(QWidget):
         else:
             self.argparse_namespace.segment_length = None
 
-
-
     def parse_output_segment_length_callback_fxn(self):
         """
         Attempts to parse the length of the output segments
@@ -361,7 +351,6 @@ class JobPanel(QWidget):
         # update UI elements
         self.update_user_interface()
 
-
     def parse_output_name_pattern_callback_fxn(self):
         """
         Attempts to parse the output name pattern for segmented mp3 files
@@ -375,14 +364,14 @@ class JobPanel(QWidget):
         Container function for submission to self.thread_pool
         holding all necessary functionality for runnanle and stoppable job treads
         """
-        if self.thread_level_job_stop_check(): return
+        if self.thread_level_job_stop_check():
+            return
 
         self.job_status = JobPanel.STATUS_RUNNING
         self.update_user_interface()
         self.worker_thread = current_thread()
 
         try:
-            print(self.argparse_namespace) # TODO: removes
             yt2mp3_utils.check_requirements()
             yt2mp3.download_convert_split(self.argparse_namespace, self)
             if not self.job_status == JobPanel.STATUS_STOPPED:
@@ -397,14 +386,6 @@ class JobPanel(QWidget):
         # update UI elements
         self.update_user_interface()
 
-    def update_process_output(self):
-        self.communicator_thread = current_thread()
-        while self.job_status in [JobPanel.STATUS_SUBMITTED, JobPanel.STATUS_RUNNING]:
-            #self.output_window.setPlainText('self.job_status = {} in {} from {}'.format(self.job_status, self.worker_thread, self.communicator_thread))
-            print('self.job_status = {} in {} from {}'.format(self.job_status, self.worker_thread, self.communicator_thread))
-            time.sleep(0.1)
-        print('FINAL JOB STATUS: {}'.format(self.job_status))
-
     def run_job_callback_fxn(self):
         """
         Try to run this JobPanel's job according to parameterization
@@ -412,10 +393,6 @@ class JobPanel(QWidget):
         self.job_status = JobPanel.STATUS_SUBMITTED
         self.update_user_interface()
         self.worker_thread_pool.submit(self.run_job_function)
-        # self.communicator_thread_pool.submit(self.update_process_output)
-
-        # update UI elements
-
 
     def thread_level_job_stop_check(self):
         if self.job_status == JobPanel.STATUS_STOPPED:
@@ -447,15 +424,16 @@ class JobPanel(QWidget):
 
         # problem: youtube-dl writes to stdout, ffmpeg writes to stderr.
         # attempting to read the one blocks the other.
-        msg = ''
+        # TODO: work smarter. assemble a message instead of reading line-by-line.
+        # msg = ''
         for p in self.child_processes:
             out_line = p.stdout.readline()
             if out_line:
                 return out_line
-                #msg += out_line
+                # msg += out_line
 
                 # PROBLEM: FFMPEG WRITES IN x-sec intervals. blocks all other stdouts with only one thread managing console IO
                 # seprate manager for all processes?
                 # NOTE: maybe later. for now, this is ok.
 
-        #return msg
+        # return msg
