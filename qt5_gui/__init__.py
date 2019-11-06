@@ -1,40 +1,21 @@
 import os
 import sys
-import copy
-import argparse
-import signal
-import time
 
-from PyQt5.QtWidgets import QMainWindow      # pylint: disable=F0401
 from PyQt5.QtWidgets import QApplication     # pylint: disable=F0401
 from PyQt5.QtWidgets import QPushButton      # pylint: disable=F0401
 from PyQt5.QtWidgets import QWidget          # pylint: disable=F0401
 from PyQt5.QtWidgets import QLabel           # pylint: disable=F0401
-from PyQt5.QtWidgets import QAction          # pylint: disable=F0401
 from PyQt5.QtWidgets import QTabWidget       # pylint: disable=F0401
 from PyQt5.QtWidgets import QVBoxLayout      # pylint: disable=F0401
 from PyQt5.QtWidgets import QHBoxLayout      # pylint: disable=F0401
 from PyQt5.QtWidgets import QGridLayout      # pylint: disable=F0401
-from PyQt5.QtWidgets import QLabel           # pylint: disable=F0401
-from PyQt5.QtWidgets import QLineEdit        # pylint: disable=F0401
-from PyQt5.QtWidgets import QCheckBox        # pylint: disable=F0401
-from PyQt5.QtWidgets import QFileDialog      # pylint: disable=F0401
-from PyQt5.QtWidgets import QPlainTextEdit   # pylint: disable=F0401
 from PyQt5 import QtGui                      # pylint: disable=F0401
-from PyQt5.QtWidgets import QAbstractItemView    # pylint: disable=F0401
 from PyQt5.QtGui import QIcon                # pylint: disable=F0401
-from PyQt5.QtGui import QTextCursor          # pylint: disable=F0401
 from PyQt5.QtCore import pyqtSlot            # pylint: disable=F0401
-from PyQt5.QtCore import QObject             # pylint: disable=F0401
 from PyQt5.QtCore import QSize               # pylint: disable=F0401
-from PyQt5.QtCore import pyqtSignal
 
 from concurrent.futures import ThreadPoolExecutor
-from threading import current_thread
-from threading import Thread
-
 import yt2mp3
-import yt2mp3_utils
 
 from .job_panel import JobPanel
 from .process_output_monitor import ProcessOutputMonitor
