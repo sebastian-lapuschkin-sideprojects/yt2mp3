@@ -14,7 +14,8 @@ def download_convert_split(args_namespace, process_watcher=None):
         by the command line argument parser
         bundling all options for a single video conversion call.
 
-    process_watcher: object - (optional) some object instance containing a field child_processes of type list expecting a registration of child processes.
+    process_watcher: object - (optional) some object instance containing a field child_processes
+        of type list expecting a registration of child processes.
         This is hacky, but currently the only solution I am aware of.
 
     Returns:
@@ -22,16 +23,6 @@ def download_convert_split(args_namespace, process_watcher=None):
 
     argparse.Namespace object as a configuration container.
     """
-
-    # NOTE: Idea. this code describes functions implementing the default work flow.
-    # Later, when adding a GUI, allow command line args optionally, as a way to pre-determine
-    # the enterable option fields of the GUI.
-    # Execute default function upon hitting a button.
-    # IE, with the gui, make multiple processes executable after another.
-    # maybe even asynchronously, allow configuration as batches.
-    # for this it might make sense to introduce a simple batch job description language.
-    # time will tell.
-
 
     # prepare some variables
     # NOTE: PREPARE PATH VARIABLES IN EXTRA FUNCTION. MUST EXIST/BE RETURNED BEFORE subprocess.Popen calls!
@@ -53,8 +44,9 @@ def download_convert_split(args_namespace, process_watcher=None):
         else:
             # split mp3 into segments
             yt2mp3_utils.split_download_into_segments(mp3_file, output_destination,
-                                                    args_namespace.segment_length, args_namespace.segment_name,
-                                                    process_watcher)
+                                                      args_namespace.segment_length,
+                                                      args_namespace.segment_name,
+                                                      process_watcher)
         print('[yt2mp3] SUCCESS! OUTPUTS CAN BE FOUND AT {}'.format(output_destination))
     except Exception as e:
         print('[yt2mp3] Bollocks! Process did not finish!')
@@ -117,17 +109,6 @@ if __name__ == '__main__':
 
     else:
         import qt5_gui as gui
-        # change imports to exchange the gui, if furhter options are added.
-        # goal: portable, lightweigth, aesthetic. pick 3.
+        # change imports to exchange the gui, if furhter options are added in the future.
+        # goal: portable, lightweigth, aesthetic. pixk and maximize n.
         gui.run()
-
-        # TODO: build gui (qt5? other. ) application and start it.
-        # take initial parameterization from args.
-        # repurpose argparse.Namespace as container.
-        # allow execution of mutiple runs in tabs(?)
-        # use threads for those tabs to encapsulate and run download_convert_split()
-
-        # NOTE: does not make sense to execute multiple videos at once. limits:
-        # parameterization. either call multiple instances of this script from
-        # command line or implement this function later via GUI, ie by using ThreadPoolExecutor
-        # to submit jobs and read their state (running, finished, exception happened).
