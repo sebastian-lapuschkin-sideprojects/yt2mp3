@@ -28,7 +28,7 @@ from .process_output_monitor import ProcessOutputMonitor
 
 def run():
     app = QApplication(sys.argv)
-    MainWindow()
+    m = MainWindow() # an assignment to m IS REQUIRED for the GUI to run. I hate GUI programming.
     sys.exit(app.exec_())
 
 
