@@ -28,7 +28,11 @@ from .process_output_monitor import ProcessOutputMonitor
 
 def run():
     app = QApplication(sys.argv)
-    m = MainWindow() # an assignment to m IS REQUIRED for the GUI to run. I hate GUI programming.
+    # an assignment to m IS REQUIRED for the GUI to run.
+    # specfically, PyQt5 is C++-based, and the py GC does
+    # not have access to what is going on "under the hood"
+    # thus mis-interprets the requirement of m
+    m = MainWindow()
     sys.exit(app.exec_())
 
 
