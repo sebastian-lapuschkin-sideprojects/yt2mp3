@@ -13,6 +13,7 @@ class ProcessOutputMonitor(QObject):
     update_output = pyqtSignal(JobPanel, str)   # the text output signals
     update_stati = pyqtSignal(dict)             # proces stati
     update_tabinfo = pyqtSignal(dict)           # process tab names
+    update_runnable_stoppable_count = pyqtSignal(int, int) # number of runnable and stoppable jobs
 
     def __init__(self, tab_panel):
         super(QObject, self).__init__()
@@ -39,10 +40,14 @@ class ProcessOutputMonitor(QObject):
                                   JobPanel.STATUS_FINISHED: 0,
                                   JobPanel.STATUS_FAILED: 0
                                   }
+            runnable_count = 0
+            stoppable_count = 0
             tab_information = {}  # job status and tab name
             for i in range(len(self.tabs)):
                 try:
                     job_panel = self.tabs.widget(i)
+                    runnable_count += job_panel.is_runnable()
+                    stoppable_count += job_panel.is_stoppable()
                     job_status_summary[job_panel.job_status] += 1
                     tab_information[i] = (job_panel.job_status, os.path.basename(job_panel.output_location_input.text()))
                     msg = job_panel.get_process_output(timeout=0.1)  # NOTE. NO TIMEOUT NEEDED. REDO STDOUT COLLECTION
@@ -52,4 +57,5 @@ class ProcessOutputMonitor(QObject):
                     print(e)
             self.update_stati.emit(job_status_summary)
             self.update_tabinfo.emit(tab_information)
+            self.update_runnable_stoppable_count.emit(runnable_count, stoppable_count)
             time.sleep(1/20)  # update frequency of 20 hz

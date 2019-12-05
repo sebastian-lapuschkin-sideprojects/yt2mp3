@@ -60,8 +60,8 @@ class MainWindow(QWidget):
 
         # first, some buttons to the right
         self.add_tab_button = QPushButton('+ Tab')           # button for adding new tabs (see below)
-        self.run_all_jobs_button = QPushButton('Run all')    # button to run all runnable (not yet running and un-run) jobs
-        self.stop_all_jobs_button = QPushButton('Stop all')  # button to terminate all running jobs
+        self.run_all_jobs_button = QPushButton('Run all (?)')    # button to run all runnable (not yet running and un-run) jobs
+        self.stop_all_jobs_button = QPushButton('Stop all (?)')  # button to terminate all running jobs
 
         # labels for summarizing job stati
         self.previous_job_stati = None  # memorize the previously received status to avoid uneccessary rendering.
@@ -146,6 +146,7 @@ class MainWindow(QWidget):
         self.process_output_monitor.update_output.connect(self.handle_process_output)
         self.process_output_monitor.update_tabinfo.connect(self.handle_tabinfo_change)
         self.process_output_monitor.update_stati.connect(self.handle_process_status_summary)
+        self.process_output_monitor.update_runnable_stoppable_count.connect(self.handle_runnable_stoppable_count)
         self.process_output_monitor.monitor_outputs()
 
         self.show()
@@ -179,6 +180,15 @@ class MainWindow(QWidget):
             self.n_jobs_failed_number_label.setText('{}'.format(status_dict[JobPanel.STATUS_FAILED]))
             # remember current values
             self.previous_job_stati = status_dict
+
+    @pyqtSlot(int, int)
+    def handle_runnable_stoppable_count(self, n_runnable, n_stoppable):
+        self.run_all_jobs_button.setEnabled(n_runnable)
+        self.run_all_jobs_button.setText('Run all ({})'.format(n_runnable))
+
+        self.stop_all_jobs_button.setEnabled(n_stoppable)
+        self.stop_all_jobs_button.setText('Stop all ({})'.format(n_stoppable))
+
 
     def add_tab(self):
         """
