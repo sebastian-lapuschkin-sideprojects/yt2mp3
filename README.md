@@ -12,18 +12,14 @@ Please note that this is in no way a professional or professionally maintained r
 - `python3` (for downloading videos)
   + `youtube-dl`
 - `ffmpeg` (for conversion and segmentation)
-
-
 ---
-## Agenda:
-make portable as stand alone app,
-fix output stream rerouting (blocking, thread prints)
+
+## How to use:
 
 ![current user interface](doc/ui.png)
 
----
-## How to use:
 The tool can be used from terminal, or as a graphical user interface:
+
 ```
 usage: yt2mp3.py [-h] [-sl SEGMENT_LENGTH] [-sn SEGMENT_NAME] [-o OUTPUT] [-n]
                  [video [video ...]]
