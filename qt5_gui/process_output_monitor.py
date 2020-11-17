@@ -58,4 +58,4 @@ class ProcessOutputMonitor(QObject):
             self.update_stati.emit(job_status_summary)
             self.update_tabinfo.emit(tab_information)
             self.update_runnable_stoppable_count.emit(runnable_count, stoppable_count)
-            time.sleep(1/20)  # update frequency of 20 hz
+            time.sleep(1/50)  # update frequency of 50 hz
